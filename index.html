@@ -1,0 +1,4016 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>十二时辰日记 - 时间管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f0f9f0 0%, #e6f7e6 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 15px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        h1 {
+            color: #2e7d32;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .tagline {
+            font-size: 0.95rem;
+            color: #4caf50;
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+        
+        .current-date {
+            font-size: 1rem;
+            color: #666;
+            background: #e8f5e9;
+            padding: 6px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        
+        /* 滑动界面容器 */
+        .swipe-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            height: 500px;
+            background: white;
+        }
+        
+        .swipe-wrapper {
+            display: flex;
+            width: 300%;
+            height: 100%;
+            transition: transform 0.4s ease;
+        }
+        
+        .swipe-panel {
+            width: 33.333%;
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .swipe-panel h2 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e8f5e9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.3rem;
+        }
+        
+        .swipe-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        
+        .swipe-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #c8e6c9;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .swipe-dot.active {
+            background: #4caf50;
+            transform: scale(1.2);
+        }
+        
+        .swipe-nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        
+        .swipe-btn {
+            padding: 8px 15px;
+            background: #4caf50;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .swipe-btn:hover {
+            background: #388e3c;
+            transform: translateY(-2px);
+        }
+        
+        .swipe-btn.prev {
+            background: #81c784;
+        }
+        
+        .swipe-btn.prev:hover {
+            background: #66bb6a;
+        }
+        
+        /* 自动保存状态指示器 */
+        .auto-save-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #666;
+            justify-content: center;
+        }
+        
+        .auto-save-icon {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #c8e6c9;
+            transition: all 0.3s;
+        }
+        
+        .auto-save-icon.active {
+            background: #4caf50;
+            animation: pulse 1s infinite;
+        }
+        
+        /* 左侧紫微斗数十二宫布局 */
+        .palace-section {
+            height: fit-content;
+        }
+        
+        .palace-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .palace-cell {
+            aspect-ratio: 1/1;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            text-align: center;
+            position: relative;
+        }
+        
+        .palace-cell:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(76, 175, 80, 0.2);
+        }
+        
+        .palace-cell.active {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        
+        .palace-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #2e7d32;
+            margin-bottom: 3px;
+        }
+        
+        .palace-time {
+            font-size: 0.75rem;
+            color: #81c784;
+            margin-bottom: 8px;
+        }
+        
+        .palace-status {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: center;
+            margin-top: 3px;
+        }
+        
+        .status-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+        }
+        
+        .mood-优 { background: #43a047; color: white; }
+        .mood-良 { background: #66bb6a; color: white; }
+        .mood-中 { background: #f1c40f; color: black; }
+        .mood-差 { background: #e74c3c; color: white; }
+        
+        .energy-优 { background: #4caf50; color: white; }
+        .energy-良 { background: #66bb6a; color: white; }
+        .energy-中 { background: #81c784; color: white; }
+        .energy-差 { background: #a5d6a7; color: white; }
+        
+        .action-icon {
+            font-size: 1rem;
+            margin-top: 3px;
+        }
+        
+        .action-sleep { color: #81c784; }
+        .action-growth { color: #43a047; }
+        .action-waste { color: #f39c12; }
+        .action-other { color: #e74c3c; }
+        
+        .palace-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        
+        .palace-btn {
+            padding: 8px 15px;
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            border-radius: 6px;
+            color: #2e7d32;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+        
+        .palace-btn:hover {
+            background: #4caf50;
+            color: white;
+        }
+        
+        /* 右侧记录区域 - 第一个面板 */
+        .record-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .period-record {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        
+        .period-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e9;
+        }
+        
+        .period-title {
+            color: #2e7d32;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .period-subtitle {
+            color: #81c784;
+            font-size: 0.9rem;
+        }
+        
+        .record-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #2e7d32;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .form-group textarea {
+            width: 100%;
+            height: 100px;
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: border 0.3s;
+        }
+        
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4caf50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .form-group select {
+            padding: 10px 12px;
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            font-size: 0.9rem;
+            transition: border 0.3s;
+        }
+        
+        .form-group select:focus {
+            outline: none;
+            border-color: #4caf50;
+        }
+        
+        .action-buttons-small {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        
+        .action-btn-small {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+        
+        .save-period-btn {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .clear-period-btn {
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+        
+        .action-btn-small:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* 知易行难编辑器 */
+        .editor-container {
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .editor-toolbar {
+            display: flex;
+            padding: 8px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #c8e6c9;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .editor-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+        
+        .editor-btn:hover {
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+        
+        .editor-btn.active {
+            background: #4caf50;
+            color: white;
+            border-color: #4caf50;
+        }
+        
+        .editor-content {
+            min-height: 120px;
+            padding: 12px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            outline: none;
+            overflow-y: auto;
+            color: #333;
+        }
+        
+        .editor-content[data-placeholder]:empty:before {
+            content: attr(data-placeholder);
+            color: #999;
+        }
+        
+        .editor-content ul, .editor-content ol {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+        
+        .editor-content li {
+            margin-bottom: 4px;
+        }
+        
+        .editor-content .lined {
+            text-decoration: line-through;
+            opacity: 0.7;
+            background-color: #f0f0f0;
+        }
+        
+        .editor-content .highlighted {
+            background-color: #e8f5e9;
+            padding: 0 2px;
+            border-radius: 3px;
+        }
+        
+        .editor-content .task-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 6px;
+            padding: 2px 0;
+            min-height: 24px;
+        }
+        
+        .editor-content .task-checkbox {
+            margin-right: 8px;
+            margin-top: 3px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        
+        .editor-content .task-content {
+            flex: 1;
+            min-height: 1.2em;
+            outline: none;
+        }
+        
+        .editor-content .task-checkbox:checked + .task-content {
+            text-decoration: line-through;
+            opacity: 0.7;
+            background-color: #f0f0f0;
+        }
+        
+        /* 防止编辑器内容为空时显示不正常 */
+        .editor-content:empty::before {
+            content: none !important;
+        }
+        
+        /* 每日总结区域 */
+        .daily-summary {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        
+        .daily-summary h2 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.3rem;
+        }
+        
+        #summaryText {
+            width: 100%;
+            height: 120px;
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: border 0.3s;
+        }
+        
+        #summaryText:focus {
+            outline: none;
+            border-color: #4caf50;
+        }
+        
+        /* 复制今日记录按钮 */
+        .copy-summary-btn {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+        }
+        
+        .copy-summary-btn:hover {
+            background: #0b7dda;
+            transform: translateY(-2px);
+        }
+        
+        /* 统计摘要标题样式 */
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .stats-header h3 {
+            color: #2e7d32;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .copy-stats-btn {
+            padding: 5px 12px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s;
+            font-size: 0.8rem;
+        }
+        
+        .copy-stats-btn:hover {
+            background: #0b7dda;
+            transform: translateY(-1px);
+        }
+        
+        /* 番茄钟面板 - 第二个面板 */
+        .pomodoro-section {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .pomodoro-timer {
+            text-align: center;
+            margin-bottom: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        #timerDisplay {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #4caf50;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .pomodoro-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .pomodoro-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        #startBtn {
+            background: #43a047;
+            color: white;
+        }
+        
+        #pauseBtn {
+            background: #f39c12;
+            color: white;
+        }
+        
+        #resetBtn {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .pomodoro-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pomodoro-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e8f5e9;
+            font-size: 0.9rem;
+        }
+        
+        .tomato-count {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+        
+        .tomato-icon {
+            color: #e74c3c;
+            font-size: 1.2rem;
+        }
+        
+        .pomodoro-settings {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .time-setting {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .time-setting input {
+            width: 60px;
+            padding: 8px;
+            border: 1px solid #c8e6c9;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        /* 数据分析面板 - 第三个面板 */
+        .trends-section {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .trends-tabs {
+            display: flex;
+            border-bottom: 2px solid #e8f5e9;
+            margin-bottom: 15px;
+            overflow-x: auto;
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #81c784;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        
+        .tab-btn.active {
+            color: #4caf50;
+            border-bottom-color: #4caf50;
+        }
+        
+        .tab-btn:hover:not(.active) {
+            color: #2e7d32;
+        }
+        
+        .tab-content {
+            display: none;
+            flex-grow: 1;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .trends-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .trend-btn {
+            padding: 8px 15px;
+            background: #e8f5e9;
+            border: none;
+            border-radius: 6px;
+            color: #4caf50;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+        }
+        
+        .trend-btn.active {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .trend-btn:hover:not(.active) {
+            background: #c8e6c9;
+        }
+        
+        .chart-container {
+            height: 250px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        /* 饼状图容器 */
+        .pie-charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        @media (min-width: 768px) {
+            .pie-charts-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        .pie-chart-wrapper {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .pie-chart-title {
+            text-align: center;
+            font-weight: 600;
+            color: #2e7d32;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .pie-chart {
+            height: 180px;
+            position: relative;
+        }
+        
+        /* 日历样式 */
+        .calendar {
+            margin-top: 15px;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .calendar-nav-btn {
+            background: #e8f5e9;
+            border: none;
+            border-radius: 6px;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .calendar-nav-btn:hover {
+            background: #c8e6c9;
+        }
+        
+        .calendar-current {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #2e7d32;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        
+        .calendar-day-header {
+            text-align: center;
+            padding: 8px;
+            font-weight: 600;
+            color: #81c784;
+            background: #e8f5e9;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1/1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 4px;
+            position: relative;
+            border: 2px solid transparent;
+            font-size: 0.85rem;
+        }
+        
+        .calendar-day:hover {
+            background: #e8f5e9;
+        }
+        
+        .calendar-day.current {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+        
+        .calendar-day.has-data {
+            background: #e8f5e9;
+        }
+        
+        .calendar-day.active-date {
+            border-color: #ff9800;
+            background: #fff3e0;
+        }
+        
+        .day-number {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .day-indicators {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .day-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        
+        .day-tomato {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            font-size: 0.7rem;
+            color: #e74c3c;
+        }
+        
+        .history-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        #historyDate {
+            padding: 8px;
+            border: 1px solid #c8e6c9;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.9rem;
+        }
+        
+        #loadHistoryBtn {
+            padding: 8px 15px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        #loadHistoryBtn:hover {
+            background: #388e3c;
+        }
+        
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .stats-container .form-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        #dailyStats {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            height: 250px;
+            overflow-y: auto;
+        }
+        
+        #monthlyStats, #yearlyStats {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e8f5e9;
+            font-size: 0.9rem;
+        }
+        
+        .stat-label {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+        
+        .stat-value {
+            color: #4caf50;
+            font-weight: 600;
+        }
+        
+        /* 数据导入导出区域 */
+        .import-export-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            margin-top: 20px;
+        }
+        
+        .import-export-section h2 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.3rem;
+        }
+        
+        .data-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .import-export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .data-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .export-btn {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .import-btn {
+            background: #2196f3;
+            color: white;
+        }
+        
+        .clear-all-btn {
+            background: #f44336;
+            color: white;
+        }
+        
+        .data-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .import-instructions {
+            background: #f8f9fa;
+            border-left: 4px solid #4caf50;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .import-instructions h4 {
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+        
+        .import-instructions ul {
+            padding-left: 20px;
+        }
+        
+        .import-instructions li {
+            margin-bottom: 3px;
+        }
+        
+        /* 底部操作按钮 */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        #saveBtn {
+            background: #4caf50;
+            color: white;
+        }
+        
+        #clearBtn {
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* 响应式调整 - 平板 */
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .tagline {
+                font-size: 1rem;
+            }
+            
+            .current-date {
+                font-size: 1.1rem;
+                padding: 8px 20px;
+            }
+            
+            .swipe-container {
+                height: 600px;
+            }
+            
+            .swipe-panel {
+                padding: 25px;
+            }
+            
+            .swipe-panel h2 {
+                font-size: 1.5rem;
+            }
+            
+            .palace-grid {
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(3, 1fr);
+                gap: 15px;
+            }
+            
+            .palace-name {
+                font-size: 1.3rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            #timerDisplay {
+                font-size: 4.5rem;
+            }
+            
+            .pomodoro-controls {
+                flex-wrap: nowrap;
+            }
+            
+            .calendar-grid {
+                gap: 5px;
+            }
+            
+            .calendar-day-header, .calendar-day {
+                font-size: 0.9rem;
+                padding: 5px;
+            }
+            
+            .stats-container .form-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .data-controls {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: flex-start;
+            }
+            
+            .import-export-buttons {
+                flex-direction: column;
+            }
+            
+            .import-instructions {
+                flex: 1;
+                margin-left: 20px;
+            }
+        }
+        
+        /* 响应式调整 - 桌面 */
+        @media (min-width: 1024px) {
+            .palace-grid {
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(3, 1fr);
+                gap: 15px;
+            }
+            
+            .palace-name {
+                font-size: 1.4rem;
+            }
+            
+            .swipe-container {
+                height: 700px;
+            }
+            
+            #timerDisplay {
+                font-size: 5rem;
+            }
+            
+            .action-buttons {
+                flex-direction: row;
+            }
+            
+            .action-btn {
+                justify-content: center;
+            }
+            
+            .import-export-buttons {
+                flex-direction: row;
+            }
+        }
+        
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .period-record, .daily-summary, .pomodoro-section, .trends-section, .palace-section, .import-export-section {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .palace-cell.active {
+            animation: pulse 2s infinite;
+        }
+        
+        /* 紫微斗数颜色主题 - 绿色系 */
+        .palace-0 { background: linear-gradient(135deg, #f8f9fa 0%, #e6f7e6 100%); }
+        .palace-1 { background: linear-gradient(135deg, #f8f9fa 0%, #e6f7ec 100%); }
+        .palace-2 { background: linear-gradient(135deg, #f8f9fa 0%, #e6f7f2 100%); }
+        .palace-3 { background: linear-gradient(135deg, #f8f9fa 0%, #e6f7f7 100%); }
+        .palace-4 { background: linear-gradient(135deg, #f8f9fa 0%, #e6f2f7 100%); }
+        .palace-5 { background: linear-gradient(135deg, #f8f9fa 0%, #e6ecf7 100%); }
+        .palace-6 { background: linear-gradient(135deg, #f8f9fa 0%, #e6e6f7 100%); }
+        .palace-7 { background: linear-gradient(135deg, #f8f9fa 0%, #ece6f7 100%); }
+        .palace-8 { background: linear-gradient(135deg, #f8f9fa 0%, #f2e6f7 100%); }
+        .palace-9 { background: linear-gradient(135deg, #f8f9fa 0%, #f7e6f7 100%); }
+        .palace-10 { background: linear-gradient(135deg, #f8f9fa 0%, #f7e6f2 100%); }
+        .palace-11 { background: linear-gradient(135deg, #f8f9fa 0%, #f7e6ec 100%); }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c8e6c9;
+            border-radius: 8px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a5d6a7;
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 480px) {
+            .swipe-container {
+                height: 450px;
+            }
+            
+            .swipe-panel {
+                padding: 15px;
+            }
+            
+            .palace-grid {
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(4, 1fr);
+                gap: 8px;
+            }
+            
+            .palace-name {
+                font-size: 1rem;
+            }
+            
+            .palace-time {
+                font-size: 0.7rem;
+            }
+            
+            .status-icon {
+                width: 16px;
+                height: 16px;
+                font-size: 0.6rem;
+            }
+            
+            #timerDisplay {
+                font-size: 2.8rem;
+            }
+            
+            .pomodoro-btn {
+                padding: 8px 15px;
+                font-size: 0.8rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .action-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 10px 20px;
+            }
+            
+            .trends-tabs {
+                font-size: 0.8rem;
+            }
+            
+            .tab-btn {
+                padding: 8px 12px;
+            }
+            
+            .trend-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .calendar-day-header {
+                padding: 6px;
+                font-size: 0.8rem;
+            }
+            
+            .calendar-day {
+                padding: 3px;
+                font-size: 0.8rem;
+            }
+            
+            .day-number {
+                font-size: 0.8rem;
+            }
+            
+            .data-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .import-export-buttons {
+                flex-direction: column;
+            }
+        }
+        
+        /* 非常小的屏幕 */
+        @media (max-width: 360px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .palace-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(6, 1fr);
+            }
+            
+            .swipe-container {
+                height: 400px;
+            }
+            
+            .swipe-panel {
+                padding: 10px;
+            }
+        }
+        
+        /* 通知样式 */
+        .notification {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            padding: 12px 20px;
+            background: #4caf50;
+            color: white;
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+            font-size: 0.9rem;
+            max-width: 300px;
+        }
+        
+        .notification.success {
+            background: #4caf50;
+        }
+        
+        .notification.error {
+            background: #e74c3c;
+        }
+        
+        .notification.info {
+            background: #f39c12;
+        }
+        
+        .notification.warning {
+            background: #ff9800;
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-15px); }
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .highlight {
+            animation: pulse 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-book-open"></i> 十二时辰日记</h1>
+            <p class="tagline">知易行难 · 记录时间中的成长</p>
+            <div class="current-date" id="currentDate">加载中...</div>
+            <div class="auto-save-status" id="autoSaveStatus">
+                <div class="auto-save-icon"></div>
+                <span id="autoSaveText">数据自动保存中...</span>
+            </div>
+        </header>
+        
+        <!-- 滑动界面容器 -->
+        <div class="swipe-container">
+            <div class="swipe-wrapper" id="swipeWrapper">
+                <!-- 第一个面板：日记记录 -->
+                <div class="swipe-panel" id="panel1">
+                    <div class="main-content" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                        <!-- 左侧十二时辰宫格 -->
+                        <section class="palace-section">
+                            <h2><i class="fas fa-chess-board"></i> 十二时辰宫格</h2>
+                            <div class="palace-grid" id="palaceGrid">
+                                <!-- 时辰宫格将通过JavaScript动态生成 -->
+                            </div>
+                            <div class="palace-controls">
+                                <button class="palace-btn" id="prevPeriodBtn">
+                                    <i class="fas fa-chevron-left"></i> 上一时辰
+                                </button>
+                                <button class="palace-btn" id="nextPeriodBtn">
+                                    下一时辰 <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </section>
+                        
+                        <!-- 右侧记录区域 -->
+                        <section class="record-section">
+                            <section class="period-record">
+                                <div class="period-header">
+                                    <div>
+                                        <div class="period-title">
+                                            <i class="fas fa-clock"></i>
+                                            <span id="selectedPeriodName">子时</span>
+                                        </div>
+                                        <div class="period-subtitle" id="selectedPeriodTime">23:00 - 01:00</div>
+                                    </div>
+                                    <div id="periodStatus" class="period-status">
+                                        <span class="status-indicator" style="background:#4caf50;"></span>
+                                        已记录
+                                    </div>
+                                </div>
+                                
+                                <div class="record-form">
+                                    <div class="form-group">
+                                        <label for="actionType"><i class="fas fa-running"></i> 做了</label>
+                                        <select id="actionType">
+                                            <option value="">选择所做之事</option>
+                                            <option value="sleep">睡觉</option>
+                                            <option value="growth">成长</option>
+                                            <option value="waste">浪费</option>
+                                            <option value="other">其他</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="knowledgeText"><i class="fas fa-brain"></i> 知易（本时辰所做的事）</label>
+                                            <div class="editor-container">
+                                                <div class="editor-toolbar" id="knowledgeToolbar">
+                                                    <button class="editor-btn" data-command="insertOrderedList" title="有序列表"><i class="fas fa-list-ol"></i></button>
+                                                    <button class="editor-btn" data-command="insertUnorderedList" title="无序列表"><i class="fas fa-list-ul"></i></button>
+                                                    <button class="editor-btn" data-command="addCheckbox" title="添加任务复选框"><i class="far fa-check-square"></i></button>
+                                                    <button class="editor-btn" data-command="highlight" title="高亮"><i class="fas fa-highlighter"></i></button>
+                                                    <button class="editor-btn" data-command="clearFormat" title="清除格式"><i class="fas fa-eraser"></i></button>
+                                                </div>
+                                                <div class="editor-content" id="knowledgeEditor" contenteditable="true" data-placeholder="记录本时辰实际完成的事情..."></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="actionText"><i class="fas fa-tasks"></i> 行难（下个时辰该做的事）</label>
+                                            <div class="editor-container">
+                                                <div class="editor-toolbar" id="actionToolbar">
+                                                    <button class="editor-btn" data-command="insertOrderedList" title="有序列表"><i class="fas fa-list-ol"></i></button>
+                                                    <button class="editor-btn" data-command="insertUnorderedList" title="无序列表"><i class="fas fa-list-ul"></i></button>
+                                                    <button class="editor-btn" data-command="addCheckbox" title="添加任务复选框"><i class="far fa-check-square"></i></button>
+                                                    <button class="editor-btn" data-command="highlight" title="高亮"><i class="fas fa-highlighter"></i></button>
+                                                    <button class="editor-btn" data-command="clearFormat" title="清除格式"><i class="fas fa-eraser"></i></button>
+                                                </div>
+                                                <div class="editor-content" id="actionEditor" contenteditable="true" data-placeholder="写下个时辰计划要做的事情..."></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="moodSelect"><i class="fas fa-smile"></i> 心情</label>
+                                            <select id="moodSelect">
+                                                <option value="优">优</option>
+                                                <option value="良" selected>良</option>
+                                                <option value="中">中</option>
+                                                <option value="差">差</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="energySelect"><i class="fas fa-battery-full"></i> 精神状态</label>
+                                            <select id="energySelect">
+                                                <option value="优">优</option>
+                                                <option value="良" selected>良</option>
+                                                <option value="中">中</option>
+                                                <option value="差">差</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="action-buttons-small">
+                                        <button class="action-btn-small save-period-btn" id="savePeriodBtn">
+                                            <i class="fas fa-save"></i> 保存此时辰
+                                        </button>
+                                        <button class="action-btn-small clear-period-btn" id="clearPeriodBtn">
+                                            <i class="fas fa-eraser"></i> 清空此时辰
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+                            
+                            <section class="daily-summary">
+                                <h2><i class="fas fa-edit"></i> 每日总结</h2>
+                                <textarea id="summaryText" placeholder="写下今日的总结与反思..."></textarea>
+                                <button class="copy-summary-btn" id="copySummaryBtn">
+                                    <i class="fas fa-copy"></i> 复制今日完整记录
+                                </button>
+                            </section>
+                        </section>
+                    </div>
+                </div>
+                
+                <!-- 第二个面板：番茄钟 -->
+                <div class="swipe-panel" id="panel2">
+                    <section class="pomodoro-section">
+                        <h2><i class="fas fa-clock"></i> 番茄钟专注</h2>
+                        <div class="pomodoro-timer">
+                            <div id="timerDisplay">25:00</div>
+                            <div class="pomodoro-controls">
+                                <button class="pomodoro-btn" id="startBtn"><i class="fas fa-play"></i> 开始</button>
+                                <button class="pomodoro-btn" id="pauseBtn"><i class="fas fa-pause"></i> 暂停</button>
+                                <button class="pomodoro-btn" id="resetBtn"><i class="fas fa-redo"></i> 重置</button>
+                            </div>
+                        </div>
+                        <div class="pomodoro-stats">
+                            <div class="tomato-count">
+                                <span class="tomato-icon"><i class="fas fa-apple-alt"></i></span>
+                                <span>今日番茄: <span id="tomatoCount">0</span> 个</span>
+                            </div>
+                            <div>累计专注: <span id="totalFocusTime">0</span> 分钟</div>
+                        </div>
+                        <div class="pomodoro-settings">
+                            <div class="time-setting">
+                                <label>专注时间 (分钟):</label>
+                                <input type="number" id="focusTime" min="1" max="60" value="25">
+                            </div>
+                            <div class="time-setting">
+                                <label>休息时间 (分钟):</label>
+                                <input type="number" id="breakTime" min="1" max="30" value="5">
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                
+                <!-- 第三个面板：数据分析 -->
+                <div class="swipe-panel" id="panel3">
+                    <section class="trends-section">
+                        <h2><i class="fas fa-chart-line"></i> 数据分析</h2>
+                        <div class="trends-tabs">
+                            <button class="tab-btn active" data-tab="daily">今日分析</button>
+                            <button class="tab-btn" data-tab="monthly">月度视图</button>
+                            <button class="tab-btn" data-tab="yearly">年度视图</button>
+                            <button class="tab-btn" data-tab="calendar">日历视图</button>
+                        </div>
+                        
+                        <div class="tab-content active" id="dailyTab">
+                            <div class="trends-controls">
+                                <button class="trend-btn active" data-period="today">今日数据</button>
+                                <button class="trend-btn" data-period="yesterday">昨日对比</button>
+                            </div>
+                            
+                            <div class="pie-charts-container">
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">行为分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="actionPieChart"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">心情分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="moodPieChart"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">精神状态分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="energyPieChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="stats-container">
+                                <div class="stats-header">
+                                    <h3><i class="fas fa-chart-bar"></i> 今日统计摘要</h3>
+                                    <button class="copy-stats-btn" data-target="dailyStats">
+                                        <i class="fas fa-copy"></i> 复制统计
+                                    </button>
+                                </div>
+                                <div id="dailyStats">
+                                    <!-- 统计信息将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-content" id="monthlyTab">
+                            <div class="trends-controls">
+                                <button class="trend-btn active" data-period="month">本月数据</button>
+                                <button class="trend-btn" data-period="lastMonth">上月对比</button>
+                            </div>
+                            
+                            <div class="pie-charts-container">
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">本月行为分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="monthlyActionPieChart"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">本月心情分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="monthlyMoodPieChart"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">本月精神状态分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="monthlyEnergyPieChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="stats-container">
+                                <div class="stats-header">
+                                    <h3><i class="fas fa-chart-bar"></i> 本月统计摘要</h3>
+                                    <button class="copy-stats-btn" data-target="monthlyStats">
+                                        <i class="fas fa-copy"></i> 复制统计
+                                    </button>
+                                </div>
+                                <div id="monthlyStats">
+                                    <!-- 统计信息将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-content" id="yearlyTab">
+                            <div class="trends-controls">
+                                <button class="trend-btn active" data-period="year">本年数据</button>
+                                <button class="trend-btn" data-period="lastYear">去年对比</button>
+                            </div>
+                            
+                            <div class="pie-charts-container">
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">本年行为分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="yearlyActionPieChart"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">本年心情分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="yearlyMoodPieChart"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="pie-chart-wrapper">
+                                    <div class="pie-chart-title">本年精神状态分布</div>
+                                    <div class="pie-chart">
+                                        <canvas id="yearlyEnergyPieChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="stats-container">
+                                <div class="stats-header">
+                                    <h3><i class="fas fa-chart-bar"></i> 本年统计摘要</h3>
+                                    <button class="copy-stats-btn" data-target="yearlyStats">
+                                        <i class="fas fa-copy"></i> 复制统计
+                                    </button>
+                                </div>
+                                <div id="yearlyStats">
+                                    <!-- 统计信息将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-content" id="calendarTab">
+                            <div class="calendar">
+                                <div class="calendar-header">
+                                    <div class="calendar-nav">
+                                        <button class="calendar-nav-btn" id="prevMonthBtn">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                        <div class="calendar-current" id="calendarMonth">2023年10月</div>
+                                        <button class="calendar-nav-btn" id="nextMonthBtn">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                    <button class="trend-btn" id="todayBtn">今天</button>
+                                </div>
+                                <div class="calendar-grid" id="calendarGrid">
+                                    <!-- 日历将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="history-selector">
+                            <label for="historyDate">查看历史记录：</label>
+                            <input type="date" id="historyDate">
+                            <button id="loadHistoryBtn">加载</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 滑动导航 -->
+        <div class="swipe-nav">
+            <div class="swipe-dot active" data-panel="0"></div>
+            <div class="swipe-dot" data-panel="1"></div>
+            <div class="swipe-dot" data-panel="2"></div>
+        </div>
+        
+        <!-- 滑动导航按钮 -->
+        <div class="swipe-nav-buttons">
+            <button class="swipe-btn prev" id="prevPanelBtn">
+                <i class="fas fa-chevron-left"></i> 上一界面
+            </button>
+            <button class="swipe-btn" id="nextPanelBtn">
+                下一界面 <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        
+        <!-- 数据导入导出区域 -->
+        <section class="import-export-section">
+            <h2><i class="fas fa-database"></i> 数据管理</h2>
+            <div class="data-controls">
+                <div class="import-export-buttons">
+                    <button class="data-btn export-btn" id="exportDataBtn">
+                        <i class="fas fa-download"></i> 导出数据
+                    </button>
+                    <button class="data-btn import-btn" id="importDataBtn">
+                        <i class="fas fa-upload"></i> 导入数据
+                    </button>
+                    <button class="data-btn clear-all-btn" id="clearAllDataBtn">
+                        <i class="fas fa-trash-alt"></i> 清空所有数据
+                    </button>
+                </div>
+                <div class="import-instructions">
+                    <h4>使用说明：</h4>
+                    <ul>
+                        <li><strong>数据安全</strong>：数据每30秒自动保存到浏览器存储，请勿清理浏览器缓存</li>
+                        <li><strong>复制今日记录</strong>：点击"复制今日完整记录"按钮，可一键复制所有时辰记录</li>
+                        <li><strong>复制统计摘要</strong>：点击"复制统计"按钮，可复制今日/本月/本年的统计数据</li>
+                        <li><strong>数据分析</strong>：查看今日、本月、本年的行为、心情和精神状态分布</li>
+                        <li><strong>导出数据</strong>：将您的所有日记数据导出为JSON文件</li>
+                        <li><strong>导入数据</strong>：从JSON文件导入数据（会合并现有数据）</li>
+                        <li><strong>清空所有数据</strong>：删除所有本地存储的日记数据</li>
+                        <li>建议定期导出备份数据以防丢失</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 底部操作按钮 -->
+        <div class="action-buttons">
+            <button class="action-btn" id="saveBtn">
+                <i class="fas fa-save"></i> 保存今日记录
+            </button>
+            <button class="action-btn" id="clearBtn">
+                <i class="fas fa-eraser"></i> 清空今日记录
+            </button>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件输入元素用于导入数据 -->
+    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+    
+    <script>
+        // 十二时辰数据
+        const periods = [
+            { name: "子时", time: "23:00-01:00", currentHour: [23, 0], order: 0 },
+            { name: "丑时", time: "01:00-03:00", currentHour: [1, 2], order: 1 },
+            { name: "寅时", time: "03:00-05:00", currentHour: [3, 4], order: 2 },
+            { name: "卯时", time: "05:00-07:00", currentHour: [5, 6], order: 3 },
+            { name: "辰时", time: "07:00-09:00", currentHour: [7, 8], order: 4 },
+            { name: "巳时", time: "09:00-11:00", currentHour: [9, 10], order: 5 },
+            { name: "午时", time: "11:00-13:00", currentHour: [11, 12], order: 6 },
+            { name: "未时", time: "13:00-15:00", currentHour: [13, 14], order: 7 },
+            { name: "申时", time: "15:00-17:00", currentHour: [15, 16], order: 8 },
+            { name: "酉时", time: "17:00-19:00", currentHour: [17, 18], order: 9 },
+            { name: "戌时", time: "19:00-21:00", currentHour: [19, 20], order: 10 },
+            { name: "亥时", time: "21:00-23:00", currentHour: [21, 22], order: 11 }
+        ];
+
+        // 行为类型选项
+        const actionOptions = [
+            { value: "sleep", label: "睡觉", color: "#81c784", icon: "fas fa-bed" },
+            { value: "growth", label: "成长", color: "#43a047", icon: "fas fa-seedling" },
+            { value: "waste", label: "浪费", color: "#f39c12", icon: "fas fa-hourglass-half" },
+            { value: "other", label: "其他", color: "#e74c3c", icon: "fas fa-ellipsis-h" }
+        ];
+        
+        // 心情和精神状态选项
+        const moodOptions = ["优", "良", "中", "差"];
+        const energyOptions = ["优", "良", "中", "差"];
+        
+        // 当前日期
+        let currentDate = new Date();
+        let currentDateStr = currentDate.toISOString().split('T')[0];
+        
+        // 当前选中的时辰索引
+        let currentPeriodIndex = 0;
+        
+        // 初始化数据存储
+        let diaryData = {
+            date: currentDateStr,
+            periods: {},
+            summary: "",
+            pomodoroSessions: 0,
+            totalFocusTime: 0
+        };
+        
+        // 初始化图表
+        let actionPieChart = null;
+        let moodPieChart = null;
+        let energyPieChart = null;
+        let monthlyActionPieChart = null;
+        let monthlyMoodPieChart = null;
+        let monthlyEnergyPieChart = null;
+        let yearlyActionPieChart = null;
+        let yearlyMoodPieChart = null;
+        let yearlyEnergyPieChart = null;
+        
+        // 番茄钟变量
+        let timer = null;
+        let isRunning = false;
+        let isFocusTime = true;
+        let timeLeft = 25 * 60; // 25分钟，以秒计
+        let focusDuration = 25 * 60;
+        let breakDuration = 5 * 60;
+        let tomatoesToday = 0;
+        
+        // 日历变量
+        let currentCalendarMonth = currentDate.getMonth();
+        let currentCalendarYear = currentDate.getFullYear();
+        
+        // 滑动面板变量
+        let currentPanelIndex = 0;
+        const totalPanels = 3;
+        
+        // 自动保存相关变量
+        let autoSaveInterval = null;
+        let lastSaveTime = null;
+        let isAutoSaving = false;
+        
+        // DOM 加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 显示当前日期
+            updateCurrentDateDisplay();
+            
+            // 初始化紫微斗数十二宫格
+            initPalaceGrid();
+            
+            // 设置历史日期选择器的默认值为今天
+            document.getElementById('historyDate').value = currentDateStr;
+            document.getElementById('historyDate').max = currentDateStr;
+            
+            // 加载今天的日记数据
+            loadDiaryData(currentDateStr);
+            
+            // 初始化饼状图
+            initPieCharts();
+            
+            // 初始化日历
+            initCalendar();
+            
+            // 初始化编辑器
+            initEditors();
+            
+            // 设置事件监听器
+            setupEventListeners();
+            
+            // 高亮当前时辰
+            highlightCurrentPeriod();
+            
+            // 更新番茄钟显示
+            updateTimerDisplay();
+            
+            // 更新番茄计数
+            updateTomatoCount();
+            
+            // 移动端优化：调整滑动容器高度
+            adjustSwipeContainerHeight();
+            
+            // 监听窗口大小变化
+            window.addEventListener('resize', adjustSwipeContainerHeight);
+            
+            // 启动自动保存
+            startAutoSave();
+            
+            // 显示数据安全提示
+            setTimeout(() => {
+                showNotification('数据每30秒自动保存，请勿清理浏览器缓存以免数据丢失！', 'info', 5000);
+            }, 2000);
+            
+            // 更新数据分析
+            updateDailyAnalysis();
+            updateMonthlyAnalysis();
+            updateYearlyAnalysis();
+        });
+        
+        // 更新当前日期显示
+        function updateCurrentDateDisplay() {
+            document.getElementById('currentDate').textContent = formatDate(currentDate);
+        }
+        
+        // 调整滑动容器高度以适应移动端
+        function adjustSwipeContainerHeight() {
+            const swipeContainer = document.querySelector('.swipe-container');
+            const windowHeight = window.innerHeight;
+            const headerHeight = document.querySelector('header').offsetHeight;
+            const navHeight = document.querySelector('.swipe-nav').offsetHeight;
+            const buttonsHeight = document.querySelector('.swipe-nav-buttons').offsetHeight;
+            const actionButtonsHeight = document.querySelector('.action-buttons').offsetHeight;
+            const importExportHeight = document.querySelector('.import-export-section').offsetHeight;
+            const margins = 100; // 上下边距
+            
+            if (window.innerWidth < 768) {
+                // 移动端：计算可用高度
+                const availableHeight = windowHeight - headerHeight - navHeight - buttonsHeight - actionButtonsHeight - importExportHeight - margins;
+                swipeContainer.style.height = Math.max(400, availableHeight) + 'px';
+            } else {
+                // 桌面端：固定高度
+                swipeContainer.style.height = '600px';
+            }
+        }
+        
+        // 启动自动保存
+        function startAutoSave() {
+            // 清除现有的自动保存定时器
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+            }
+            
+            // 设置每30秒自动保存
+            autoSaveInterval = setInterval(() => {
+                autoSaveData();
+            }, 30000); // 30秒
+            
+            // 更新自动保存状态
+            updateAutoSaveStatus(true);
+            
+            console.log('自动保存已启动，每30秒保存一次数据');
+        }
+        
+        // 自动保存数据
+        function autoSaveData() {
+            if (isAutoSaving) return;
+            
+            isAutoSaving = true;
+            
+            try {
+                // 保存编辑器内容
+                saveEditorContent();
+                
+                // 保存当前表单数据到diaryData对象
+                const periodName = periods[currentPeriodIndex].name;
+                if (!diaryData.periods[periodName]) {
+                    diaryData.periods[periodName] = {};
+                }
+                
+                diaryData.periods[periodName].action = document.getElementById('actionType').value;
+                diaryData.periods[periodName].mood = document.getElementById('moodSelect').value;
+                diaryData.periods[periodName].energy = document.getElementById('energySelect').value;
+                
+                // 保存每日总结
+                diaryData.summary = document.getElementById('summaryText').value;
+                
+                // 保存番茄钟数据
+                diaryData.pomodoroSessions = tomatoesToday;
+                
+                // 保存到本地存储
+                localStorage.setItem(`diary_${currentDateStr}`, JSON.stringify(diaryData));
+                
+                // 更新最后保存时间
+                lastSaveTime = new Date();
+                
+                // 更新自动保存状态
+                updateAutoSaveStatus(true, '数据已自动保存');
+                
+                // 短暂显示保存状态
+                setTimeout(() => {
+                    updateAutoSaveStatus(true, '数据自动保存中...');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('自动保存失败:', error);
+                updateAutoSaveStatus(false, '自动保存失败');
+            } finally {
+                isAutoSaving = false;
+            }
+        }
+        
+        // 更新自动保存状态显示
+        function updateAutoSaveStatus(isActive, message = null) {
+            const icon = document.querySelector('.auto-save-icon');
+            const text = document.getElementById('autoSaveText');
+            
+            if (isActive) {
+                icon.classList.add('active');
+                if (message) {
+                    text.textContent = message;
+                } else {
+                    text.textContent = '数据自动保存中...';
+                }
+            } else {
+                icon.classList.remove('active');
+                text.textContent = '自动保存已暂停';
+            }
+        }
+        
+        // 页面关闭前保存数据
+        function setupBeforeUnload() {
+            window.addEventListener('beforeunload', function(e) {
+                // 保存数据
+                autoSaveData();
+            });
+        }
+        
+        // 初始化紫微斗数十二宫格
+        function initPalaceGrid() {
+            const grid = document.getElementById('palaceGrid');
+            grid.innerHTML = '';
+            
+            periods.forEach((period, index) => {
+                const cell = document.createElement('div');
+                cell.className = `palace-cell palace-${index}`;
+                cell.dataset.index = index;
+                cell.dataset.period = period.name;
+                
+                cell.innerHTML = `
+                    <div class="palace-name">${period.name}</div>
+                    <div class="palace-time">${period.time}</div>
+                    <div class="palace-status" id="status-${period.name}">
+                        <!-- 状态图标将通过JavaScript动态更新 -->
+                    </div>
+                    <div class="action-icon" id="action-${period.name}">
+                        <!-- 行为图标将通过JavaScript动态更新 -->
+                    </div>
+                `;
+                
+                grid.appendChild(cell);
+                
+                // 点击宫格选择时辰
+                cell.addEventListener('click', () => {
+                    selectPeriod(index);
+                });
+            });
+            
+            // 默认选中当前时辰或第一个时辰
+            const currentHour = new Date().getHours();
+            const currentPeriodIndex = periods.findIndex(p => p.currentHour.includes(currentHour));
+            selectPeriod(currentPeriodIndex >= 0 ? currentPeriodIndex : 0);
+        }
+        
+        // 初始化编辑器
+        function initEditors() {
+            // 为编辑器工具栏添加事件监听
+            document.querySelectorAll('.editor-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const command = this.dataset.command;
+                    const editorId = this.closest('.editor-container').querySelector('.editor-content').id;
+                    const editor = document.getElementById(editorId);
+                    
+                    // 执行命令
+                    executeEditorCommand(editor, command);
+                    
+                    // 更新按钮状态
+                    updateEditorButtonState(this, command);
+                });
+            });
+            
+            // 为编辑器添加占位符处理
+            const knowledgeEditor = document.getElementById('knowledgeEditor');
+            const actionEditor = document.getElementById('actionEditor');
+            
+            // 设置data-placeholder属性
+            knowledgeEditor.dataset.placeholder = '记录本时辰实际完成的事情...';
+            actionEditor.dataset.placeholder = '写下个时辰计划要做的事情...';
+            
+            // 添加焦点事件
+            [knowledgeEditor, actionEditor].forEach(editor => {
+                // 焦点事件：如果内容是占位符，清空
+                editor.addEventListener('focus', function() {
+                    // 检查是否是空的或只有占位符
+                    const isPlaceholder = this.textContent === this.dataset.placeholder || 
+                                        (this.textContent.trim() === '' && !this.innerHTML.includes('<'));
+                    
+                    if (isPlaceholder) {
+                        this.innerHTML = '';
+                    }
+                });
+                
+                // 输入事件：确保内容不是占位符
+                editor.addEventListener('input', function() {
+                    // 触发自动保存
+                    triggerAutoSave();
+                });
+                
+                // 失焦事件：如果内容为空，显示占位符
+                editor.addEventListener('blur', function() {
+                    if (this.textContent.trim() === '' || this.innerHTML === '<br>') {
+                        this.innerHTML = '';
+                        // 占位符通过CSS的::before显示
+                    }
+                });
+                
+                // 防止粘贴内容变成灰色
+                editor.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    
+                    // 获取粘贴的文本
+                    const text = e.clipboardData.getData('text/plain');
+                    
+                    // 插入文本
+                    document.execCommand('insertText', false, text);
+                    
+                    // 触发自动保存
+                    triggerAutoSave();
+                });
+            });
+            
+            // 添加点击事件处理复选框
+            document.querySelectorAll('.editor-content').forEach(editor => {
+                editor.addEventListener('click', function(e) {
+                    if (e.target.type === 'checkbox') {
+                        const checkbox = e.target;
+                        const taskItem = checkbox.closest('.task-item');
+                        if (taskItem) {
+                            const taskContent = taskItem.querySelector('.task-content');
+                            if (checkbox.checked) {
+                                taskContent.classList.add('lined');
+                            } else {
+                                taskContent.classList.remove('lined');
+                            }
+                            triggerAutoSave();
+                        }
+                    }
+                });
+            });
+        }
+        
+        // 触发自动保存
+        function triggerAutoSave() {
+            // 保存编辑器内容
+            saveEditorContent();
+            
+            // 清除现有的自动保存定时器
+            clearTimeout(window.triggerSaveTimeout);
+            
+            // 设置延迟保存（防抖）
+            window.triggerSaveTimeout = setTimeout(() => {
+                autoSaveData();
+            }, 1000);
+        }
+        
+        // 执行编辑器命令
+        function executeEditorCommand(editor, command) {
+            // 聚焦到编辑器
+            editor.focus();
+            
+            switch(command) {
+                case 'insertOrderedList':
+                    document.execCommand('insertOrderedList', false, null);
+                    break;
+                    
+                case 'insertUnorderedList':
+                    document.execCommand('insertUnorderedList', false, null);
+                    break;
+                    
+                case 'addCheckbox':
+                    insertCheckbox(editor);
+                    break;
+                    
+                case 'highlight':
+                    document.execCommand('backColor', false, '#e8f5e9');
+                    break;
+                    
+                case 'clearFormat':
+                    document.execCommand('removeFormat', false, null);
+                    document.execCommand('unlink', false, null);
+                    break;
+            }
+            
+            // 触发自动保存
+            triggerAutoSave();
+        }
+        
+        // 插入复选框（优化版：复选框出现在选中的文字前面）
+        function insertCheckbox(editor) {
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            
+            // 检查是否有选中的文本
+            if (!range.collapsed) {
+                // 有选中的文本，将选中文本转换为任务项
+                const selectedContent = range.extractContents();
+                
+                // 创建任务项容器
+                const taskItem = document.createElement('div');
+                taskItem.className = 'task-item';
+                
+                // 创建复选框
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'task-checkbox';
+                
+                // 创建任务内容容器
+                const taskContent = document.createElement('div');
+                taskContent.className = 'task-content';
+                taskContent.contentEditable = 'true';
+                
+                // 将选中的内容放入任务内容中
+                taskContent.appendChild(selectedContent);
+                
+                // 组装任务项
+                taskItem.appendChild(checkbox);
+                taskItem.appendChild(taskContent);
+                
+                // 插入到编辑器中
+                range.insertNode(taskItem);
+                
+                // 添加换行
+                const br = document.createElement('br');
+                range.insertNode(br);
+                
+                // 移动光标到新行
+                range.setStartAfter(br);
+                range.setEndAfter(br);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            } else {
+                // 没有选中文本，插入空任务项
+                // 创建任务项容器
+                const taskItem = document.createElement('div');
+                taskItem.className = 'task-item';
+                
+                // 创建复选框
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'task-checkbox';
+                
+                // 创建任务内容容器
+                const taskContent = document.createElement('div');
+                taskContent.className = 'task-content';
+                taskContent.contentEditable = 'true';
+                
+                // 组装任务项
+                taskItem.appendChild(checkbox);
+                taskItem.appendChild(taskContent);
+                
+                // 插入到编辑器中
+                range.insertNode(taskItem);
+                
+                // 添加换行
+                const br = document.createElement('br');
+                range.insertNode(br);
+                
+                // 移动光标到新行并聚焦到任务内容
+                range.setStartAfter(br);
+                range.setEndAfter(br);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                // 聚焦到任务内容
+                taskContent.focus();
+            }
+            
+            // 触发自动保存
+            triggerAutoSave();
+        }
+        
+        // 更新编辑器按钮状态
+        function updateEditorButtonState(button, command) {
+            // 移除所有按钮的active类
+            button.parentElement.querySelectorAll('.editor-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 为当前按钮添加active类（如果是切换类命令）
+            if (['highlight'].includes(command)) {
+                button.classList.toggle('active');
+            }
+        }
+        
+        // 保存编辑器内容
+        function saveEditorContent() {
+            const periodName = periods[currentPeriodIndex].name;
+            
+            if (!diaryData.periods[periodName]) {
+                diaryData.periods[periodName] = {};
+            }
+            
+            const knowledgeEditor = document.getElementById('knowledgeEditor');
+            const actionEditor = document.getElementById('actionEditor');
+            
+            // 获取内容，如果内容是空的或者等于占位符，保存为空字符串
+            let knowledgeContent = knowledgeEditor.innerHTML;
+            let actionContent = actionEditor.innerHTML;
+            
+            // 检查是否是占位符状态（编辑器为空）
+            if (knowledgeEditor.textContent.trim() === '' && !knowledgeEditor.innerHTML.includes('<')) {
+                knowledgeContent = '';
+            }
+            
+            if (actionEditor.textContent.trim() === '' && !actionEditor.innerHTML.includes('<')) {
+                actionContent = '';
+            }
+            
+            diaryData.periods[periodName].knowledge = knowledgeContent;
+            diaryData.periods[periodName].actionPlan = actionContent;
+        }
+        
+        // 加载编辑器内容
+        function loadEditorContent(periodName) {
+            const periodData = diaryData.periods[periodName] || {};
+            
+            const knowledgeEditor = document.getElementById('knowledgeEditor');
+            const actionEditor = document.getElementById('actionEditor');
+            
+            // 加载知识编辑器内容
+            if (periodData.knowledge && periodData.knowledge.trim() !== '') {
+                knowledgeEditor.innerHTML = periodData.knowledge;
+            } else {
+                knowledgeEditor.innerHTML = '';
+            }
+            
+            // 加载行动编辑器内容
+            if (periodData.actionPlan && periodData.actionPlan.trim() !== '') {
+                actionEditor.innerHTML = periodData.actionPlan;
+            } else {
+                actionEditor.innerHTML = '';
+            }
+            
+            // 修复复选框的显示
+            fixCheckboxesInEditor(knowledgeEditor);
+            fixCheckboxesInEditor(actionEditor);
+        }
+        
+        // 修复编辑器中的复选框显示
+        function fixCheckboxesInEditor(editor) {
+            // 查找所有复选框并修复它们的显示
+            const checkboxes = editor.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const taskItem = checkbox.closest('.task-item');
+                if (taskItem) {
+                    const taskContent = taskItem.querySelector('.task-content');
+                    if (!taskContent) {
+                        // 修复缺少task-content的情况
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'task-content';
+                        contentDiv.contentEditable = 'true';
+                        
+                        // 移动兄弟节点到contentDiv
+                        let nextSibling = checkbox.nextSibling;
+                        while (nextSibling && nextSibling.nodeType === 1 && nextSibling.tagName !== 'DIV') {
+                            contentDiv.appendChild(nextSibling);
+                            nextSibling = checkbox.nextSibling;
+                        }
+                        
+                        taskItem.appendChild(contentDiv);
+                    }
+                    
+                    // 根据复选框状态设置样式
+                    if (checkbox.checked) {
+                        taskContent.classList.add('lined');
+                    } else {
+                        taskContent.classList.remove('lined');
+                    }
+                }
+            });
+        }
+        
+        // 更新宫格状态显示
+        function updatePalaceStatus() {
+            periods.forEach((period, index) => {
+                const periodData = diaryData.periods[period.name] || {};
+                const statusElement = document.getElementById(`status-${period.name}`);
+                const actionElement = document.getElementById(`action-${period.name}`);
+                
+                // 清空状态显示
+                statusElement.innerHTML = '';
+                actionElement.innerHTML = '';
+                
+                // 如果有记录，显示心情和精神状态图标
+                if (periodData.mood || periodData.energy) {
+                    if (periodData.mood) {
+                        const moodIcon = document.createElement('div');
+                        moodIcon.className = `status-icon mood-${periodData.mood}`;
+                        moodIcon.title = `心情: ${periodData.mood}`;
+                        moodIcon.textContent = periodData.mood.charAt(0);
+                        statusElement.appendChild(moodIcon);
+                    }
+                    
+                    if (periodData.energy) {
+                        const energyIcon = document.createElement('div');
+                        energyIcon.className = `status-icon energy-${periodData.energy}`;
+                        energyIcon.title = `精神: ${periodData.energy}`;
+                        energyIcon.textContent = periodData.energy.charAt(0);
+                        statusElement.appendChild(energyIcon);
+                    }
+                }
+                
+                // 显示行为图标
+                if (periodData.action) {
+                    const actionOption = actionOptions.find(opt => opt.value === periodData.action);
+                    if (actionOption) {
+                        actionElement.innerHTML = `<i class="${actionOption.icon} action-${periodData.action}"></i>`;
+                        actionElement.title = actionOption.label;
+                    }
+                }
+                
+                // 更新宫格视觉状态
+                const cell = document.querySelector(`.palace-cell[data-index="${index}"]`);
+                if (periodData.knowledge || periodData.action) {
+                    cell.style.opacity = "1";
+                    cell.style.boxShadow = "0 3px 6px rgba(0, 0, 0, 0.08)";
+                } else {
+                    cell.style.opacity = "0.9";
+                    cell.style.boxShadow = "none";
+                }
+            });
+        }
+        
+        // 选择时辰
+        function selectPeriod(index) {
+            // 移除所有宫格的active类
+            document.querySelectorAll('.palace-cell').forEach(cell => {
+                cell.classList.remove('active');
+            });
+            
+            // 添加当前宫格的active类
+            document.querySelector(`.palace-cell[data-index="${index}"]`).classList.add('active');
+            
+            // 更新当前选中的时辰索引
+            currentPeriodIndex = index;
+            
+            // 更新右侧表单
+            updateRecordForm(index);
+            
+            // 更新选中时辰的状态指示器
+            updatePeriodStatus();
+            
+            // 触发自动保存
+            triggerAutoSave();
+        }
+        
+        // 更新记录表单
+        function updateRecordForm(periodIndex) {
+            const period = periods[periodIndex];
+            
+            // 更新标题
+            document.getElementById('selectedPeriodName').textContent = period.name;
+            document.getElementById('selectedPeriodTime').textContent = period.time;
+            
+            // 获取该时辰的数据
+            const periodData = diaryData.periods[period.name] || {};
+            
+            // 更新表单字段
+            document.getElementById('actionType').value = periodData.action || '';
+            document.getElementById('moodSelect').value = periodData.mood || '良';
+            document.getElementById('energySelect').value = periodData.energy || '良';
+            
+            // 更新编辑器内容
+            loadEditorContent(period.name);
+        }
+        
+        // 更新时辰状态指示器
+        function updatePeriodStatus() {
+            const periodName = periods[currentPeriodIndex].name;
+            const periodData = diaryData.periods[periodName] || {};
+            const statusIndicator = document.getElementById('periodStatus');
+            
+            if (periodData.knowledge || periodData.action) {
+                statusIndicator.innerHTML = '<span class="status-indicator" style="background:#4caf50;"></span> 已记录';
+            } else {
+                statusIndicator.innerHTML = '<span class="status-indicator" style="background:#e74c3c;"></span> 未记录';
+            }
+        }
+        
+        // 高亮当前时辰
+        function highlightCurrentPeriod() {
+            const currentHour = new Date().getHours();
+            const currentPeriodIndex = periods.findIndex(p => p.currentHour.includes(currentHour));
+            
+            if (currentPeriodIndex >= 0) {
+                // 延迟一秒后高亮当前时辰，给用户一个视觉提示
+                setTimeout(() => {
+                    selectPeriod(currentPeriodIndex);
+                    
+                    // 短暂闪烁效果
+                    const cell = document.querySelector(`.palace-cell[data-index="${currentPeriodIndex}"]`);
+                    cell.classList.add('highlight');
+                    setTimeout(() => {
+                        cell.classList.remove('highlight');
+                    }, 2000);
+                }, 1000);
+            }
+        }
+        
+        // 加载日记数据
+        function loadDiaryData(dateStr) {
+            // 更新当前日期
+            currentDate = new Date(dateStr);
+            currentDateStr = dateStr;
+            
+            // 更新日期显示
+            updateCurrentDateDisplay();
+            
+            // 更新历史日期选择器
+            document.getElementById('historyDate').value = dateStr;
+            
+            const savedData = localStorage.getItem(`diary_${dateStr}`);
+            if (savedData) {
+                diaryData = JSON.parse(savedData);
+                
+                // 更新当前选中的时辰表单
+                updateRecordForm(currentPeriodIndex);
+                
+                // 恢复每日总结
+                document.getElementById('summaryText').value = diaryData.summary || '';
+                
+                // 更新番茄计数
+                tomatoesToday = diaryData.pomodoroSessions || 0;
+                updateTomatoCount();
+                
+                // 更新所有时辰的状态
+                updatePalaceStatus();
+                
+                // 更新日历显示，高亮当前日期
+                updateCalendar();
+                
+                console.log(`已加载 ${dateStr} 的日记数据`);
+                
+                // 更新今日分析
+                updateDailyAnalysis();
+            } else {
+                // 如果是新日期，重置数据
+                if (dateStr !== diaryData.date) {
+                    diaryData = {
+                        date: dateStr,
+                        periods: {},
+                        summary: "",
+                        pomodoroSessions: 0,
+                        totalFocusTime: diaryData.totalFocusTime || 0
+                    };
+                    
+                    // 重置表单
+                    updateRecordForm(currentPeriodIndex);
+                    document.getElementById('summaryText').value = '';
+                    
+                    // 重置番茄计数
+                    tomatoesToday = 0;
+                    updateTomatoCount();
+                    
+                    // 更新所有时辰的状态
+                    updatePalaceStatus();
+                    
+                    // 更新今日分析
+                    updateDailyAnalysis();
+                }
+            }
+            
+            // 触发自动保存
+            triggerAutoSave();
+        }
+        
+        // 更新番茄计数显示
+        function updateTomatoCount() {
+            document.getElementById('tomatoCount').textContent = tomatoesToday;
+            const focusMinutes = Math.floor((diaryData.totalFocusTime || 0) / 60);
+            document.getElementById('totalFocusTime').textContent = focusMinutes;
+        }
+        
+        // 保存当前时辰数据
+        function saveCurrentPeriod() {
+            const periodName = periods[currentPeriodIndex].name;
+            
+            // 保存编辑器内容
+            saveEditorContent();
+            
+            diaryData.periods[periodName] = {
+                action: document.getElementById('actionType').value,
+                knowledge: document.getElementById('knowledgeEditor').innerHTML,
+                actionPlan: document.getElementById('actionEditor').innerHTML,
+                mood: document.getElementById('moodSelect').value,
+                energy: document.getElementById('energySelect').value,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 更新状态指示器
+            updatePeriodStatus();
+            updatePalaceStatus();
+            
+            // 保存到本地存储
+            localStorage.setItem(`diary_${currentDateStr}`, JSON.stringify(diaryData));
+            
+            // 显示保存成功提示
+            showNotification(`${periodName} 记录已保存！`, 'success');
+            
+            // 更新今日分析
+            updateDailyAnalysis();
+            
+            // 更新日历显示
+            updateCalendar();
+        }
+        
+        // 清空当前时辰数据
+        function clearCurrentPeriod() {
+            if (confirm(`确定要清空 ${periods[currentPeriodIndex].name} 的记录吗？`)) {
+                const periodName = periods[currentPeriodIndex].name;
+                
+                // 删除该时辰的数据
+                delete diaryData.periods[periodName];
+                
+                // 重置表单
+                document.getElementById('actionType').value = '';
+                document.getElementById('moodSelect').value = '良';
+                document.getElementById('energySelect').value = '良';
+                
+                // 重置编辑器
+                const knowledgeEditor = document.getElementById('knowledgeEditor');
+                const actionEditor = document.getElementById('actionEditor');
+                
+                knowledgeEditor.innerHTML = '';
+                actionEditor.innerHTML = '';
+                
+                // 更新状态指示器
+                updatePeriodStatus();
+                updatePalaceStatus();
+                
+                // 保存到本地存储
+                localStorage.setItem(`diary_${currentDateStr}`, JSON.stringify(diaryData));
+                
+                // 显示提示
+                showNotification(`${periodName} 记录已清空`, 'info');
+                
+                // 更新今日分析
+                updateDailyAnalysis();
+                
+                // 更新日历显示
+                updateCalendar();
+            }
+        }
+        
+        // 保存所有日记数据
+        function saveDiaryData() {
+            // 先保存当前时辰数据
+            saveCurrentPeriod();
+            
+            // 保存每日总结
+            diaryData.summary = document.getElementById('summaryText').value;
+            
+            // 保存番茄钟数据
+            diaryData.pomodoroSessions = tomatoesToday;
+            
+            // 保存到本地存储
+            localStorage.setItem(`diary_${currentDateStr}`, JSON.stringify(diaryData));
+            
+            // 显示保存成功提示
+            showNotification('今日日记已保存！', 'success');
+            
+            // 更新今日分析
+            updateDailyAnalysis();
+            
+            // 更新日历显示
+            updateCalendar();
+        }
+        
+        // 清空所有日记数据
+        function clearAllDiaryData() {
+            if (confirm('确定要清空今日的所有记录吗？此操作不可撤销。')) {
+                // 重置数据
+                diaryData = {
+                    date: currentDateStr,
+                    periods: {},
+                    summary: "",
+                    pomodoroSessions: 0,
+                    totalFocusTime: diaryData.totalFocusTime || 0
+                };
+                
+                // 重置表单
+                updateRecordForm(currentPeriodIndex);
+                document.getElementById('summaryText').value = '';
+                
+                // 重置编辑器
+                const knowledgeEditor = document.getElementById('knowledgeEditor');
+                const actionEditor = document.getElementById('actionEditor');
+                
+                knowledgeEditor.innerHTML = '';
+                actionEditor.innerHTML = '';
+                
+                // 重置番茄计数
+                tomatoesToday = 0;
+                updateTomatoCount();
+                
+                // 更新状态指示器
+                updatePalaceStatus();
+                
+                // 保存到本地存储
+                localStorage.setItem(`diary_${currentDateStr}`, JSON.stringify(diaryData));
+                
+                showNotification('今日记录已清空', 'info');
+                
+                // 更新今日分析
+                updateDailyAnalysis();
+                
+                // 更新日历显示
+                updateCalendar();
+            }
+        }
+        
+        // 导出所有数据
+        function exportAllData() {
+            // 收集所有日记数据
+            const allData = {};
+            const today = new Date();
+            
+            // 遍历最近一年的数据
+            for (let i = 0; i < 365; i++) {
+                const date = new Date();
+                date.setDate(today.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                const savedData = localStorage.getItem(`diary_${dateStr}`);
+                
+                if (savedData) {
+                    allData[dateStr] = JSON.parse(savedData);
+                }
+            }
+            
+            // 创建导出数据对象
+            const exportData = {
+                appName: "十二时辰日记",
+                exportDate: new Date().toISOString(),
+                data: allData,
+                autoSaveEnabled: true,
+                autoSaveInterval: 30, // 秒
+                note: "数据每30秒自动保存到浏览器存储，请勿清理浏览器缓存"
+            };
+            
+            // 转换为JSON字符串
+            const dataStr = JSON.stringify(exportData, null, 2);
+            
+            // 创建下载链接
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = `十二时辰日记_导出_${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('数据导出成功！', 'success');
+        }
+        
+        // 导入数据
+        function importData() {
+            document.getElementById('importFileInput').click();
+        }
+        
+        // 处理文件导入
+        function handleFileImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importData = JSON.parse(event.target.result);
+                    
+                    // 验证导入数据格式
+                    if (!importData.data || typeof importData.data !== 'object') {
+                        showNotification('导入文件格式不正确', 'error');
+                        return;
+                    }
+                    
+                    // 统计导入的数据
+                    let importedCount = 0;
+                    let skippedCount = 0;
+                    
+                    // 遍历导入的数据
+                    for (const dateStr in importData.data) {
+                        const dateData = importData.data[dateStr];
+                        
+                        // 检查是否已有该日期的数据
+                        const existingData = localStorage.getItem(`diary_${dateStr}`);
+                        
+                        if (existingData) {
+                            // 询问是否覆盖
+                            if (confirm(`发现已有 ${dateStr} 的数据，是否覆盖？`)) {
+                                localStorage.setItem(`diary_${dateStr}`, JSON.stringify(dateData));
+                                importedCount++;
+                            } else {
+                                skippedCount++;
+                            }
+                        } else {
+                            // 直接导入
+                            localStorage.setItem(`diary_${dateStr}`, JSON.stringify(dateData));
+                            importedCount++;
+                        }
+                    }
+                    
+                    // 重新加载当前数据
+                    loadDiaryData(currentDateStr);
+                    
+                    // 更新分析图表
+                    updateDailyAnalysis();
+                    updateMonthlyAnalysis();
+                    updateYearlyAnalysis();
+                    
+                    // 更新日历
+                    updateCalendar();
+                    
+                    showNotification(`数据导入完成！成功导入 ${importedCount} 条记录，跳过 ${skippedCount} 条记录。`, 'success');
+                    
+                } catch (error) {
+                    console.error('导入数据时出错:', error);
+                    showNotification('导入文件格式不正确或已损坏', 'error');
+                }
+                
+                // 清除文件输入的值，以便可以再次选择同一文件
+                e.target.value = '';
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // 清空所有数据（所有日记记录）
+        function clearAllStoredData() {
+            if (confirm('警告：此操作将删除所有已保存的日记数据，包括自动保存的数据！\n\n确定要清空所有日记数据吗？此操作不可撤销！\n\n建议先导出备份数据。')) {
+                // 获取所有日记数据的键
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('diary_')) {
+                        keysToRemove.push(key);
+                    }
+                }
+                
+                // 删除所有日记数据
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+                
+                // 重置当前数据
+                diaryData = {
+                    date: currentDateStr,
+                    periods: {},
+                    summary: "",
+                    pomodoroSessions: 0,
+                    totalFocusTime: 0
+                };
+                
+                // 重置表单
+                updateRecordForm(currentPeriodIndex);
+                document.getElementById('summaryText').value = '';
+                
+                // 重置番茄计数
+                tomatoesToday = 0;
+                updateTomatoCount();
+                
+                // 更新状态指示器
+                updatePalaceStatus();
+                
+                // 更新分析图表
+                updateDailyAnalysis();
+                updateMonthlyAnalysis();
+                updateYearlyAnalysis();
+                
+                // 更新日历
+                updateCalendar();
+                
+                showNotification('所有数据已清空', 'warning');
+            }
+        }
+        
+        // 滑动到指定面板
+        function goToPanel(panelIndex) {
+            if (panelIndex < 0 || panelIndex >= totalPanels) return;
+            
+            currentPanelIndex = panelIndex;
+            const swipeWrapper = document.getElementById('swipeWrapper');
+            swipeWrapper.style.transform = `translateX(-${panelIndex * 33.333}%)`;
+            
+            // 更新导航点
+            document.querySelectorAll('.swipe-dot').forEach((dot, index) => {
+                if (index === panelIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+        
+        // 初始化饼状图
+        function initPieCharts() {
+            // 今日饼状图
+            initPieChart('actionPieChart', actionOptions, '行为分布');
+            initPieChart('moodPieChart', moodOptions, '心情分布', ['#43a047', '#66bb6a', '#f1c40f', '#e74c3c']);
+            initPieChart('energyPieChart', energyOptions, '精神状态分布', ['#4caf50', '#66bb6a', '#81c784', '#a5d6a7']);
+            
+            // 月度饼状图
+            initPieChart('monthlyActionPieChart', actionOptions, '本月行为分布');
+            initPieChart('monthlyMoodPieChart', moodOptions, '本月心情分布', ['#43a047', '#66bb6a', '#f1c40f', '#e74c3c']);
+            initPieChart('monthlyEnergyPieChart', energyOptions, '本月精神状态分布', ['#4caf50', '#66bb6a', '#81c784', '#a5d6a7']);
+            
+            // 年度饼状图
+            initPieChart('yearlyActionPieChart', actionOptions, '本年行为分布');
+            initPieChart('yearlyMoodPieChart', moodOptions, '本年心情分布', ['#43a047', '#66bb6a', '#f1c40f', '#e74c3c']);
+            initPieChart('yearlyEnergyPieChart', energyOptions, '本年精神状态分布', ['#4caf50', '#66bb6a', '#81c784', '#a5d6a7']);
+        }
+        
+        // 初始化单个饼状图
+        function initPieChart(canvasId, options, title, customColors = null) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // 准备数据
+            const labels = options.map(opt => typeof opt === 'object' ? opt.label || opt : opt);
+            const colors = customColors || options.map(opt => typeof opt === 'object' ? opt.color || '#4caf50' : '#4caf50');
+            const data = new Array(labels.length).fill(0);
+            
+            return new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        title: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${value} 次 (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 更新今日分析
+        function updateDailyAnalysis() {
+            // 获取今日数据
+            const todayData = diaryData.periods || {};
+            
+            // 统计行为、心情、精神状态
+            const actionCounts = { sleep: 0, growth: 0, waste: 0, other: 0 };
+            const moodCounts = { 优: 0, 良: 0, 中: 0, 差: 0 };
+            const energyCounts = { 优: 0, 良: 0, 中: 0, 差: 0 };
+            
+            let recordedPeriods = 0;
+            let totalMoodScore = 0;
+            let totalEnergyScore = 0;
+            
+            periods.forEach(period => {
+                const periodData = todayData[period.name];
+                if (periodData) {
+                    recordedPeriods++;
+                    
+                    // 统计行为
+                    if (periodData.action && actionCounts.hasOwnProperty(periodData.action)) {
+                        actionCounts[periodData.action]++;
+                    }
+                    
+                    // 统计心情
+                    if (periodData.mood && moodCounts.hasOwnProperty(periodData.mood)) {
+                        moodCounts[periodData.mood]++;
+                        totalMoodScore += moodOptions.indexOf(periodData.mood) + 1;
+                    }
+                    
+                    // 统计精神状态
+                    if (periodData.energy && energyCounts.hasOwnProperty(periodData.energy)) {
+                        energyCounts[periodData.energy]++;
+                        totalEnergyScore += energyOptions.indexOf(periodData.energy) + 1;
+                    }
+                }
+            });
+            
+            // 更新饼状图数据
+            updatePieChartData('actionPieChart', actionOptions.map(opt => actionCounts[opt.value]));
+            updatePieChartData('moodPieChart', moodOptions.map(opt => moodCounts[opt]));
+            updatePieChartData('energyPieChart', energyOptions.map(opt => energyCounts[opt]));
+            
+            // 更新统计摘要
+            updateDailyStats(recordedPeriods, totalMoodScore, totalEnergyScore, todayData);
+        }
+        
+        // 更新月度分析
+        function updateMonthlyAnalysis() {
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
+            
+            // 统计本月的所有数据
+            const actionCounts = { sleep: 0, growth: 0, waste: 0, other: 0 };
+            const moodCounts = { 优: 0, 良: 0, 中: 0, 差: 0 };
+            const energyCounts = { 优: 0, 良: 0, 中: 0, 差: 0 };
+            
+            let totalDays = 0;
+            let totalRecordedPeriods = 0;
+            let totalMoodScore = 0;
+            let totalEnergyScore = 0;
+            
+            // 获取本月的天数
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const savedData = localStorage.getItem(`diary_${dateStr}`);
+                
+                if (savedData) {
+                    totalDays++;
+                    const data = JSON.parse(savedData);
+                    
+                    // 统计每个时辰的数据
+                    Object.values(data.periods).forEach(period => {
+                        if (period) {
+                            totalRecordedPeriods++;
+                            
+                            // 统计行为
+                            if (period.action && actionCounts.hasOwnProperty(period.action)) {
+                                actionCounts[period.action]++;
+                            }
+                            
+                            // 统计心情
+                            if (period.mood && moodCounts.hasOwnProperty(period.mood)) {
+                                moodCounts[period.mood]++;
+                                totalMoodScore += moodOptions.indexOf(period.mood) + 1;
+                            }
+                            
+                            // 统计精神状态
+                            if (period.energy && energyCounts.hasOwnProperty(period.energy)) {
+                                energyCounts[period.energy]++;
+                                totalEnergyScore += energyOptions.indexOf(period.energy) + 1;
+                            }
+                        }
+                    });
+                }
+            }
+            
+            // 更新月度饼状图数据
+            updatePieChartData('monthlyActionPieChart', actionOptions.map(opt => actionCounts[opt.value]));
+            updatePieChartData('monthlyMoodPieChart', moodOptions.map(opt => moodCounts[opt]));
+            updatePieChartData('monthlyEnergyPieChart', energyOptions.map(opt => energyCounts[opt]));
+            
+            // 更新月度统计摘要
+            updateMonthlyStats(totalDays, totalRecordedPeriods, totalMoodScore, totalEnergyScore);
+        }
+        
+        // 更新年度分析
+        function updateYearlyAnalysis() {
+            const currentYear = currentDate.getFullYear();
+            
+            // 统计本年的所有数据
+            const actionCounts = { sleep: 0, growth: 0, waste: 0, other: 0 };
+            const moodCounts = { 优: 0, 良: 0, 中: 0, 差: 0 };
+            const energyCounts = { 优: 0, 良: 0, 中: 0, 差: 0 };
+            
+            let totalDays = 0;
+            let totalRecordedPeriods = 0;
+            let totalMoodScore = 0;
+            let totalEnergyScore = 0;
+            
+            // 遍历一年的每一天
+            for (let month = 0; month < 12; month++) {
+                const daysInMonth = new Date(currentYear, month + 1, 0).getDate();
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateStr = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const savedData = localStorage.getItem(`diary_${dateStr}`);
+                    
+                    if (savedData) {
+                        totalDays++;
+                        const data = JSON.parse(savedData);
+                        
+                        // 统计每个时辰的数据
+                        Object.values(data.periods).forEach(period => {
+                            if (period) {
+                                totalRecordedPeriods++;
+                                
+                                // 统计行为
+                                if (period.action && actionCounts.hasOwnProperty(period.action)) {
+                                    actionCounts[period.action]++;
+                                }
+                                
+                                // 统计心情
+                                if (period.mood && moodCounts.hasOwnProperty(period.mood)) {
+                                    moodCounts[period.mood]++;
+                                    totalMoodScore += moodOptions.indexOf(period.mood) + 1;
+                                }
+                                
+                                // 统计精神状态
+                                if (period.energy && energyCounts.hasOwnProperty(period.energy)) {
+                                    energyCounts[period.energy]++;
+                                    totalEnergyScore += energyOptions.indexOf(period.energy) + 1;
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+            
+            // 更新年度饼状图数据
+            updatePieChartData('yearlyActionPieChart', actionOptions.map(opt => actionCounts[opt.value]));
+            updatePieChartData('yearlyMoodPieChart', moodOptions.map(opt => moodCounts[opt]));
+            updatePieChartData('yearlyEnergyPieChart', energyOptions.map(opt => energyCounts[opt]));
+            
+            // 更新年度统计摘要
+            updateYearlyStats(totalDays, totalRecordedPeriods, totalMoodScore, totalEnergyScore);
+        }
+        
+        // 更新饼状图数据
+        function updatePieChartData(canvasId, data) {
+            // 根据canvasId找到对应的图表实例
+            let chart;
+            switch(canvasId) {
+                case 'actionPieChart':
+                    chart = actionPieChart;
+                    break;
+                case 'moodPieChart':
+                    chart = moodPieChart;
+                    break;
+                case 'energyPieChart':
+                    chart = energyPieChart;
+                    break;
+                case 'monthlyActionPieChart':
+                    chart = monthlyActionPieChart;
+                    break;
+                case 'monthlyMoodPieChart':
+                    chart = monthlyMoodPieChart;
+                    break;
+                case 'monthlyEnergyPieChart':
+                    chart = monthlyEnergyPieChart;
+                    break;
+                case 'yearlyActionPieChart':
+                    chart = yearlyActionPieChart;
+                    break;
+                case 'yearlyMoodPieChart':
+                    chart = yearlyMoodPieChart;
+                    break;
+                case 'yearlyEnergyPieChart':
+                    chart = yearlyEnergyPieChart;
+                    break;
+                default:
+                    return;
+            }
+            
+            if (chart) {
+                chart.data.datasets[0].data = data;
+                chart.update();
+            }
+        }
+        
+        // 更新今日统计摘要
+        function updateDailyStats(recordedPeriods, totalMoodScore, totalEnergyScore, todayData) {
+            const statsContainer = document.getElementById('dailyStats');
+            const totalPeriods = periods.length;
+            const completionRate = Math.round((recordedPeriods / totalPeriods) * 100);
+            const avgMood = recordedPeriods > 0 ? (totalMoodScore / recordedPeriods).toFixed(1) : 0;
+            const avgEnergy = recordedPeriods > 0 ? (totalEnergyScore / recordedPeriods).toFixed(1) : 0;
+            
+            // 计算各种行为的数量
+            let sleepCount = 0, growthCount = 0, wasteCount = 0, otherCount = 0;
+            periods.forEach(period => {
+                const periodData = todayData[period.name];
+                if (periodData && periodData.action) {
+                    switch(periodData.action) {
+                        case 'sleep': sleepCount++; break;
+                        case 'growth': growthCount++; break;
+                        case 'waste': wasteCount++; break;
+                        case 'other': otherCount++; break;
+                    }
+                }
+            });
+            
+            const statsHTML = `
+                <div class="stat-item">
+                    <span class="stat-label">记录完整度</span>
+                    <span class="stat-value">${completionRate}% (${recordedPeriods}/${totalPeriods})</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均心情</span>
+                    <span class="stat-value">${avgMood}/4.0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均精神状态</span>
+                    <span class="stat-value">${avgEnergy}/4.0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">睡觉时辰</span>
+                    <span class="stat-value">${sleepCount} 个</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">成长时辰</span>
+                    <span class="stat-value">${growthCount} 个</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">浪费时辰</span>
+                    <span class="stat-value">${wasteCount} 个</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">其他时辰</span>
+                    <span class="stat-value">${otherCount} 个</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">今日番茄</span>
+                    <span class="stat-value">${tomatoesToday} 个</span>
+                </div>
+            `;
+            
+            statsContainer.innerHTML = statsHTML;
+        }
+        
+        // 更新月度统计摘要
+        function updateMonthlyStats(totalDays, totalRecordedPeriods, totalMoodScore, totalEnergyScore) {
+            const statsContainer = document.getElementById('monthlyStats');
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const totalPossiblePeriods = totalDays * periods.length;
+            const completionRate = totalPossiblePeriods > 0 ? Math.round((totalRecordedPeriods / totalPossiblePeriods) * 100) : 0;
+            const avgMood = totalRecordedPeriods > 0 ? (totalMoodScore / totalRecordedPeriods).toFixed(1) : 0;
+            const avgEnergy = totalRecordedPeriods > 0 ? (totalEnergyScore / totalRecordedPeriods).toFixed(1) : 0;
+            const avgPeriodsPerDay = totalDays > 0 ? (totalRecordedPeriods / totalDays).toFixed(1) : 0;
+            
+            const statsHTML = `
+                <div class="stat-item">
+                    <span class="stat-label">记录天数</span>
+                    <span class="stat-value">${totalDays}/${daysInMonth} 天</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">总记录时辰数</span>
+                    <span class="stat-value">${totalRecordedPeriods} 个</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均每天记录</span>
+                    <span class="stat-value">${avgPeriodsPerDay} 个时辰</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">记录完整度</span>
+                    <span class="stat-value">${completionRate}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均心情</span>
+                    <span class="stat-value">${avgMood}/4.0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均精神状态</span>
+                    <span class="stat-value">${avgEnergy}/4.0</span>
+                </div>
+            `;
+            
+            statsContainer.innerHTML = statsHTML;
+        }
+        
+        // 更新年度统计摘要
+        function updateYearlyStats(totalDays, totalRecordedPeriods, totalMoodScore, totalEnergyScore) {
+            const statsContainer = document.getElementById('yearlyStats');
+            const currentYear = currentDate.getFullYear();
+            const daysInYear = ((currentYear % 4 === 0 && currentYear % 100 !== 0) || currentYear % 400 === 0) ? 366 : 365;
+            const totalPossiblePeriods = totalDays * periods.length;
+            const completionRate = totalPossiblePeriods > 0 ? Math.round((totalRecordedPeriods / totalPossiblePeriods) * 100) : 0;
+            const avgMood = totalRecordedPeriods > 0 ? (totalMoodScore / totalRecordedPeriods).toFixed(1) : 0;
+            const avgEnergy = totalRecordedPeriods > 0 ? (totalEnergyScore / totalRecordedPeriods).toFixed(1) : 0;
+            const avgPeriodsPerDay = totalDays > 0 ? (totalRecordedPeriods / totalDays).toFixed(1) : 0;
+            
+            const statsHTML = `
+                <div class="stat-item">
+                    <span class="stat-label">记录天数</span>
+                    <span class="stat-value">${totalDays}/${daysInYear} 天</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">总记录时辰数</span>
+                    <span class="stat-value">${totalRecordedPeriods} 个</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均每天记录</span>
+                    <span class="stat-value">${avgPeriodsPerDay} 个时辰</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">记录完整度</span>
+                    <span class="stat-value">${completionRate}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均心情</span>
+                    <span class="stat-value">${avgMood}/4.0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">平均精神状态</span>
+                    <span class="stat-value">${avgEnergy}/4.0</span>
+                </div>
+            `;
+            
+            statsContainer.innerHTML = statsHTML;
+        }
+        
+        // 复制统计摘要
+        function copyStatsSummary(targetId) {
+            const statsContainer = document.getElementById(targetId);
+            const statItems = statsContainer.querySelectorAll('.stat-item');
+            
+            if (statItems.length === 0) {
+                showNotification('没有统计数据可复制', 'warning');
+                return;
+            }
+            
+            let text = '';
+            const currentDate = new Date();
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            const day = currentDate.getDate();
+            
+            // 根据目标ID确定统计类型
+            let title = '';
+            if (targetId === 'dailyStats') {
+                title = `今日统计摘要 - ${year}年${month}月${day}日\n`;
+            } else if (targetId === 'monthlyStats') {
+                title = `本月统计摘要 - ${year}年${month}月\n`;
+            } else if (targetId === 'yearlyStats') {
+                title = `本年统计摘要 - ${year}年\n`;
+            }
+            
+            text += title;
+            text += "=".repeat(30) + "\n";
+            
+            // 提取统计项文本
+            statItems.forEach(item => {
+                const label = item.querySelector('.stat-label').textContent;
+                const value = item.querySelector('.stat-value').textContent;
+                text += `${label}: ${value}\n`;
+            });
+            
+            text += "=".repeat(30) + "\n";
+            text += "生成时间：" + new Date().toLocaleString();
+            
+            // 复制到剪贴板
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('统计摘要已复制到剪贴板！', 'success');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                showNotification('复制失败，请手动复制', 'error');
+            });
+        }
+        
+        // 初始化日历
+        function initCalendar() {
+            updateCalendar();
+        }
+        
+        // 更新日历显示
+        function updateCalendar() {
+            const monthNames = ["一月", "二月", "三月", "四月", "五月", "六月", 
+                               "七月", "八月", "九月", "十月", "十一月", "十二月"];
+            
+            // 更新日历标题
+            document.getElementById('calendarMonth').textContent = 
+                `${currentCalendarYear}年${monthNames[currentCalendarMonth]}`;
+            
+            // 获取该月的第一天是星期几
+            const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1);
+            const firstDayWeekday = firstDay.getDay(); // 0 = 星期日, 1 = 星期一, ...
+            
+            // 获取该月的天数
+            const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth + 1, 0).getDate();
+            
+            // 获取上个月的天数
+            const prevMonthDays = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
+            
+            // 清空日历网格
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+            
+            // 添加星期标题
+            const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+            weekdays.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.textContent = day;
+                calendarGrid.appendChild(dayHeader);
+            });
+            
+            // 添加上个月的日期
+            for (let i = firstDayWeekday - 1; i >= 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                day.innerHTML = `<div class="day-number">${prevMonthDays - i}</div>`;
+                day.style.opacity = "0.4";
+                calendarGrid.appendChild(day);
+            }
+            
+            // 添加本月的日期
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                const isCurrentDate = dateStr === currentDateStr;
+                
+                if (isToday) {
+                    dayElement.classList.add('current');
+                }
+                
+                if (isCurrentDate) {
+                    dayElement.classList.add('active-date');
+                }
+                
+                dayElement.innerHTML = `<div class="day-number">${day}</div>`;
+                
+                // 检查该日期是否有数据
+                const savedData = localStorage.getItem(`diary_${dateStr}`);
+                if (savedData) {
+                    dayElement.classList.add('has-data');
+                    const data = JSON.parse(savedData);
+                    
+                    // 添加番茄计数
+                    if (data.pomodoroSessions > 0) {
+                        const tomatoElement = document.createElement('div');
+                        tomatoElement.className = 'day-tomato';
+                        tomatoElement.innerHTML = `<i class="fas fa-apple-alt"></i> ${data.pomodoroSessions}`;
+                        dayElement.appendChild(tomatoElement);
+                    }
+                    
+                    // 计算平均心情
+                    let moodSum = 0, moodCount = 0;
+                    Object.values(data.periods).forEach(period => {
+                        if (period.mood) {
+                            moodSum += moodOptions.indexOf(period.mood);
+                            moodCount++;
+                        }
+                    });
+                    
+                    // 添加心情指示器
+                    if (moodCount > 0) {
+                        const avgMood = moodSum / moodCount;
+                        const moodColor = avgMood >= 3 ? '#43a047' : avgMood >= 2 ? '#66bb6a' : avgMood >= 1 ? '#f1c40f' : '#e74c3c';
+                        
+                        const indicatorsElement = document.createElement('div');
+                        indicatorsElement.className = 'day-indicators';
+                        
+                        const moodIndicator = document.createElement('div');
+                        moodIndicator.className = 'day-indicator';
+                        moodIndicator.style.backgroundColor = moodColor;
+                        moodIndicator.title = `平均心情: ${moodOptions[Math.round(avgMood)] || '中'}`;
+                        
+                        indicatorsElement.appendChild(moodIndicator);
+                        dayElement.appendChild(indicatorsElement);
+                    }
+                }
+                
+                // 点击日期加载该日记录
+                dayElement.addEventListener('click', () => {
+                    loadDiaryData(dateStr);
+                    showNotification(`已加载 ${dateStr} 的记录`, 'success');
+                    
+                    // 回到第一个面板
+                    goToPanel(0);
+                    
+                    // 更新日历显示
+                    updateCalendar();
+                });
+                
+                calendarGrid.appendChild(dayElement);
+            }
+            
+            // 添加下个月的日期
+            const totalCells = 42; // 6行 * 7列
+            const cellsUsed = firstDayWeekday + daysInMonth;
+            const nextMonthDays = totalCells - cellsUsed;
+            
+            for (let day = 1; day <= nextMonthDays; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.innerHTML = `<div class="day-number">${day}</div>`;
+                dayElement.style.opacity = "0.4";
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+        
+        // 复制今日完整记录
+        function copyTodayRecord() {
+            // 获取今日数据
+            const todayData = diaryData;
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            const day = currentDate.getDate();
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            const weekday = weekdays[currentDate.getDay()];
+            
+            // 构建文本内容
+            let text = `十二时辰日记 - ${year}年${month}月${day}日 星期${weekday}\n`;
+            text += "=".repeat(40) + "\n\n";
+            
+            // 添加每个时辰的记录
+            periods.forEach(period => {
+                const periodData = todayData.periods[period.name];
+                if (periodData) {
+                    text += `【${period.name}】${period.time}\n`;
+                    text += `做了：${getActionLabel(periodData.action)}\n`;
+                    text += `心情：${periodData.mood || '未记录'}\n`;
+                    text += `精神状态：${periodData.energy || '未记录'}\n`;
+                    
+                    // 添加知易内容（去除HTML标签）
+                    if (periodData.knowledge && periodData.knowledge.trim() !== '') {
+                        const cleanKnowledge = periodData.knowledge.replace(/<[^>]*>/g, '').trim();
+                        if (cleanKnowledge) {
+                            text += `知易：${cleanKnowledge}\n`;
+                        }
+                    }
+                    
+                    // 添加行难内容（去除HTML标签）
+                    if (periodData.actionPlan && periodData.actionPlan.trim() !== '') {
+                        const cleanActionPlan = periodData.actionPlan.replace(/<[^>]*>/g, '').trim();
+                        if (cleanActionPlan) {
+                            text += `行难：${cleanActionPlan}\n`;
+                        }
+                    }
+                    
+                    text += "\n";
+                }
+            });
+            
+            // 添加每日总结
+            if (todayData.summary && todayData.summary.trim() !== '') {
+                text += "【每日总结】\n";
+                text += todayData.summary + "\n\n";
+            }
+            
+            // 添加番茄钟统计
+            if (todayData.pomodoroSessions > 0) {
+                text += `今日番茄钟：${todayData.pomodoroSessions} 个\n`;
+            }
+            
+            text += "=".repeat(40) + "\n";
+            text += "生成时间：" + new Date().toLocaleString();
+            
+            // 复制到剪贴板
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('今日完整记录已复制到剪贴板！', 'success');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                showNotification('复制失败，请手动复制', 'error');
+            });
+        }
+        
+        // 获取行为标签
+        function getActionLabel(actionValue) {
+            const actionOption = actionOptions.find(opt => opt.value === actionValue);
+            return actionOption ? actionOption.label : '未记录';
+        }
+        
+        // 番茄钟功能
+        function startTimer() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            timer = setInterval(() => {
+                timeLeft--;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    isRunning = false;
+                    
+                    // 播放提示音
+                    playNotificationSound();
+                    
+                    // 切换专注/休息时间
+                    if (isFocusTime) {
+                        // 专注时间结束，切换到休息时间
+                        isFocusTime = false;
+                        timeLeft = breakDuration;
+                        showNotification('专注时间结束，开始休息！', 'success');
+                        
+                        // 记录番茄钟
+                        tomatoesToday++;
+                        diaryData.pomodoroSessions = tomatoesToday;
+                        diaryData.totalFocusTime = (diaryData.totalFocusTime || 0) + focusDuration;
+                        
+                        // 更新显示
+                        updateTomatoCount();
+                        
+                        // 保存数据
+                        localStorage.setItem(`diary_${currentDateStr}`, JSON.stringify(diaryData));
+                        
+                        // 更新日历显示
+                        updateCalendar();
+                    } else {
+                        // 休息时间结束，切换回专注时间
+                        isFocusTime = true;
+                        timeLeft = focusDuration;
+                        showNotification('休息时间结束，开始专注！', 'info');
+                    }
+                    
+                    // 更新显示并重新开始计时器
+                    updateTimerDisplay();
+                    startTimer();
+                } else {
+                    updateTimerDisplay();
+                }
+            }, 1000);
+        }
+        
+        function pauseTimer() {
+            if (!isRunning) return;
+            
+            clearInterval(timer);
+            isRunning = false;
+            showNotification('番茄钟已暂停', 'info');
+        }
+        
+        function resetTimer() {
+            clearInterval(timer);
+            isRunning = false;
+            isFocusTime = true;
+            timeLeft = focusDuration;
+            updateTimerDisplay();
+            showNotification('番茄钟已重置', 'info');
+        }
+        
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const timerDisplay = document.getElementById('timerDisplay');
+            
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // 根据状态改变颜色
+            if (isFocusTime) {
+                timerDisplay.style.color = '#4caf50';
+            } else {
+                timerDisplay.style.color = '#f39c12';
+            }
+        }
+        
+        function updateTimerSettings() {
+            focusDuration = parseInt(document.getElementById('focusTime').value) * 60;
+            breakDuration = parseInt(document.getElementById('breakTime').value) * 60;
+            
+            if (!isRunning) {
+                timeLeft = isFocusTime ? focusDuration : breakDuration;
+                updateTimerDisplay();
+            }
+        }
+        
+        // 播放提示音
+        function playNotificationSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                console.log('音频播放失败:', e);
+            }
+        }
+        
+        // 显示通知
+        function showNotification(message, type, duration = 3000) {
+            // 移除现有的通知
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // 创建新通知
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // 指定时间后自动移除
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.5s';
+                setTimeout(() => notification.remove(), 500);
+            }, duration);
+        }
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 保存当前时辰按钮
+            document.getElementById('savePeriodBtn').addEventListener('click', saveCurrentPeriod);
+            
+            // 清空当前时辰按钮
+            document.getElementById('clearPeriodBtn').addEventListener('click', clearCurrentPeriod);
+            
+            // 保存所有按钮
+            document.getElementById('saveBtn').addEventListener('click', saveDiaryData);
+            
+            // 清空所有按钮
+            document.getElementById('clearBtn').addEventListener('click', clearAllDiaryData);
+            
+            // 复制今日记录按钮
+            document.getElementById('copySummaryBtn').addEventListener('click', copyTodayRecord);
+            
+            // 复制统计摘要按钮
+            document.querySelectorAll('.copy-stats-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    copyStatsSummary(targetId);
+                });
+            });
+            
+            // 上一时辰按钮
+            document.getElementById('prevPeriodBtn').addEventListener('click', function() {
+                let newIndex = currentPeriodIndex - 1;
+                if (newIndex < 0) newIndex = periods.length - 1;
+                selectPeriod(newIndex);
+            });
+            
+            // 下一时辰按钮
+            document.getElementById('nextPeriodBtn').addEventListener('click', function() {
+                let newIndex = currentPeriodIndex + 1;
+                if (newIndex >= periods.length) newIndex = 0;
+                selectPeriod(newIndex);
+            });
+            
+            // 番茄钟控制
+            document.getElementById('startBtn').addEventListener('click', startTimer);
+            document.getElementById('pauseBtn').addEventListener('click', pauseTimer);
+            document.getElementById('resetBtn').addEventListener('click', resetTimer);
+            
+            // 番茄钟设置
+            document.getElementById('focusTime').addEventListener('change', updateTimerSettings);
+            document.getElementById('breakTime').addEventListener('change', updateTimerSettings);
+            
+            // 标签页切换
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabId = this.dataset.tab;
+                    
+                    // 更新按钮状态
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 显示对应的内容
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(`${tabId}Tab`).classList.add('active');
+                    
+                    // 更新对应分析数据
+                    if (tabId === 'daily') {
+                        updateDailyAnalysis();
+                    } else if (tabId === 'monthly') {
+                        updateMonthlyAnalysis();
+                    } else if (tabId === 'yearly') {
+                        updateYearlyAnalysis();
+                    }
+                });
+            });
+            
+            // 趋势图控制
+            document.querySelectorAll('.trend-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 更新按钮状态
+                    const parent = this.closest('.trends-controls');
+                    parent.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 根据当前标签页更新数据
+                    const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+                    if (activeTab === 'daily') {
+                        updateDailyAnalysis();
+                    } else if (activeTab === 'monthly') {
+                        updateMonthlyAnalysis();
+                    } else if (activeTab === 'yearly') {
+                        updateYearlyAnalysis();
+                    }
+                });
+            });
+            
+            // 日历导航
+            document.getElementById('prevMonthBtn').addEventListener('click', function() {
+                currentCalendarMonth--;
+                if (currentCalendarMonth < 0) {
+                    currentCalendarMonth = 11;
+                    currentCalendarYear--;
+                }
+                updateCalendar();
+            });
+            
+            document.getElementById('nextMonthBtn').addEventListener('click', function() {
+                currentCalendarMonth++;
+                if (currentCalendarMonth > 11) {
+                    currentCalendarMonth = 0;
+                    currentCalendarYear++;
+                }
+                updateCalendar();
+            });
+            
+            document.getElementById('todayBtn').addEventListener('click', function() {
+                currentCalendarMonth = currentDate.getMonth();
+                currentCalendarYear = currentDate.getFullYear();
+                updateCalendar();
+            });
+            
+            // 加载历史记录
+            document.getElementById('loadHistoryBtn').addEventListener('click', function() {
+                const historyDate = document.getElementById('historyDate').value;
+                if (historyDate) {
+                    loadDiaryData(historyDate);
+                    showNotification(`已加载 ${historyDate} 的记录`, 'success');
+                    
+                    // 回到第一个面板
+                    goToPanel(0);
+                }
+            });
+            
+            // 滑动导航
+            document.querySelectorAll('.swipe-dot').forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    goToPanel(index);
+                });
+            });
+            
+            // 滑动导航按钮
+            document.getElementById('prevPanelBtn').addEventListener('click', () => {
+                let newIndex = currentPanelIndex - 1;
+                if (newIndex < 0) newIndex = totalPanels - 1;
+                goToPanel(newIndex);
+            });
+            
+            document.getElementById('nextPanelBtn').addEventListener('click', () => {
+                let newIndex = currentPanelIndex + 1;
+                if (newIndex >= totalPanels) newIndex = 0;
+                goToPanel(newIndex);
+            });
+            
+            // 数据导入导出按钮
+            document.getElementById('exportDataBtn').addEventListener('click', exportAllData);
+            document.getElementById('importDataBtn').addEventListener('click', importData);
+            document.getElementById('clearAllDataBtn').addEventListener('click', clearAllStoredData);
+            
+            // 文件导入处理
+            document.getElementById('importFileInput').addEventListener('change', handleFileImport);
+            
+            // 自动保存文本输入
+            document.querySelectorAll('textarea, select').forEach(element => {
+                element.addEventListener('change', function() {
+                    // 触发自动保存
+                    triggerAutoSave();
+                });
+            });
+            
+            // 设置页面关闭前保存
+            setupBeforeUnload();
+        }
+        
+        // 格式化日期
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            const weekday = weekdays[date.getDay()];
+            
+            return `${year}年${month}月${day}日 星期${weekday}`;
+        }
+    </script>
+</body>
+</html>
