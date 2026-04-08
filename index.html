@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>知易行难 · 十二时辰日记（时辰自动跟随+跨日）</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0f9f0 0%, #e6f7e6 100%);
+            min-height: 100vh;
+            padding: 20px 16px 40px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 28px;
+            padding: 18px 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(2px);
+        }
+        h1 {
+            color: #2e7d32;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .tagline {
+            font-size: 0.9rem;
+            color: #4caf50;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        .date-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 12px;
+            background: #e8f5e9;
+            padding: 8px 18px;
+            border-radius: 60px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .current-date {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1b5e20;
+            background: white;
+            padding: 5px 16px;
+            border-radius: 40px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .current-date:hover {
+            background: #e8f5e9;
+            transform: scale(1.02);
+        }
+        .history-selector {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: white;
+            padding: 3px 12px 3px 16px;
+            border-radius: 40px;
+        }
+        .history-selector label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #2e7d32;
+        }
+        #historyDate {
+            border: 1px solid #c8e6c9;
+            border-radius: 30px;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            background: white;
+        }
+        #loadHistoryBtn {
+            background: #4caf50;
+            border: none;
+            color: white;
+            padding: 5px 14px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .auto-save-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: #558b2f;
+        }
+        .auto-save-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #c8e6c9;
+        }
+        .auto-save-icon.active {
+            background: #4caf50;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.5; } 100% { opacity: 1; transform: scale(1.2); } }
+
+        .swipe-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 28px;
+            background: white;
+            margin-bottom: 20px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+            height: 560px;
+        }
+        .swipe-wrapper {
+            display: flex;
+            width: 300%;
+            height: 100%;
+            transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+        .swipe-panel {
+            width: 33.333%;
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .swipe-panel h2 {
+            color: #2e7d32;
+            font-size: 1.4rem;
+            border-bottom: 3px solid #e8f5e9;
+            padding-bottom: 8px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .palace-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .palace-cell {
+            background: #fefef7;
+            border-radius: 20px;
+            padding: 12px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #e0f0e0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .palace-cell.active {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            transform: scale(1.02);
+            box-shadow: 0 8px 16px rgba(76,175,80,0.15);
+        }
+        .palace-cell.current-time {
+            border: 2px solid #ff9800;
+            background: #fff3e0;
+            box-shadow: 0 0 0 2px rgba(255,152,0,0.3);
+        }
+        .palace-name {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #2e7d32;
+        }
+        .palace-time {
+            font-size: 0.7rem;
+            color: #81c784;
+            margin: 4px 0;
+        }
+        .palace-status {
+            display: flex;
+            gap: 5px;
+            margin-top: 6px;
+        }
+        .status-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .mood-优 { background: #43a047; color: white; }
+        .mood-良 { background: #66bb6a; color: white; }
+        .mood-中 { background: #f1c40f; color: #2c3e2c; }
+        .mood-差 { background: #e74c3c; color: white; }
+        .energy-优 { background: #4caf50; color: white; }
+        .energy-良 { background: #81c784; color: white; }
+        .energy-中 { background: #a5d6a7; color: #2e3b2e; }
+        .energy-差 { background: #c8e6c9; color: #5e6b5e; }
+        .action-icon i { font-size: 1rem; color: #558b2f; }
+        .palace-controls {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 6px;
+        }
+        .palace-btn {
+            background: #f0f7f0;
+            border: 1px solid #c8e6c9;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #2e7d32;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.8rem;
+        }
+        .palace-btn:hover { background: #c8e6c9; }
+
+        .period-record, .daily-summary {
+            background: #fefefe;
+            border-radius: 24px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid #e8f0e8;
+        }
+        .period-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            align-items: baseline;
+        }
+        .period-title { font-size: 1.4rem; font-weight: 800; color: #1b5e20; }
+        .period-subtitle { font-size: 0.8rem; color: #6fbf6f; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { font-weight: 600; color: #2e7d32; display: block; margin-bottom: 6px; font-size: 0.85rem; }
+        select, .editor-content {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #d4e6d4;
+            border-radius: 20px;
+            background: white;
+            transition: 0.2s;
+        }
+        .editor-content {
+            min-height: 90px;
+            outline: none;
+            line-height: 1.4;
+        }
+        .action-buttons-small {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .action-btn-small {
+            padding: 8px 18px;
+            border-radius: 40px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .save-period-btn { background: #4caf50; color: white; }
+        .clear-period-btn { background: #f5f5f5; color: #5e5e5e; border: 1px solid #ddd; }
+        #summaryText {
+            width: 100%;
+            height: 100px;
+            border-radius: 20px;
+            padding: 12px;
+            border: 1.5px solid #d4e6d4;
+        }
+        .copy-summary-btn {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .focus-module {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;  /* 减小间隙，释放空间 */
+        }
+        .time-bubble {
+            background: linear-gradient(120deg, #e8f5e9, #dcf5dc);
+            border-radius: 40px;
+            padding: 12px 12px;
+            text-align: center;
+        }
+        .time-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #2e7d32;
+        }
+        .remaining-time {
+            font-size: 2rem;
+            font-weight: 800;
+            font-family: monospace;
+            color: #1b5e20;
+            letter-spacing: 1px;
+        }
+        .task-toolbar {
+            background: #f8faf8;
+            border-radius: 28px;
+            padding: 12px;
+        }
+        .add-task-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .input-group {
+            flex: 2;
+            min-width: 110px;
+        }
+        .input-group label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #2e7d32;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 6px 10px;
+            border-radius: 30px;
+            border: 1px solid #c8e6c9;
+            font-size: 0.85rem;
+        }
+        .mode-group {
+            display: flex;
+            gap: 10px;
+            background: white;
+            padding: 4px 10px;
+            border-radius: 50px;
+            border: 1px solid #c8e6c9;
+            font-size: 0.75rem;
+        }
+        .add-btn {
+            background: #4caf50;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .rain-btn {
+            background: #e0f2e0;
+            color: #2c5e2c;
+        }
+        .rain-btn.active {
+            background: #2e7d32;
+            color: white;
+        }
+        .reminder-settings {
+            background: #f0f7f0;
+            border-radius: 28px;
+            padding: 8px 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .reminder-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: white;
+            padding: 4px 10px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+        }
+        .reminder-item label {
+            color: #2e7d32;
+            font-weight: 600;
+        }
+        .reminder-item input {
+            width: 60px;
+            padding: 4px 6px;
+            border-radius: 20px;
+            border: 1px solid #c8e6c9;
+            text-align: center;
+            font-size: 0.7rem;
+        }
+        .toggle-switch {
+            width: 32px;
+            height: 18px;
+            background: #c8e6c9;
+            border-radius: 30px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toggle-switch.active {
+            background: #4caf50;
+        }
+        .toggle-switch::after {
+            content: "";
+            width: 14px;
+            height: 14px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: 0.2s;
+        }
+        .toggle-switch.active::after {
+            left: 16px;
+        }
+        .tasks-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 260px;   /* 手机下增大显示区域 */
+            overflow-y: auto;
+            padding-right: 4px;
+            margin-top: 4px;
+        }
+        .task-card {
+            background: white;
+            border-radius: 20px;
+            padding: 10px 14px;
+            border-left: 5px solid #4caf50;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .task-name {
+            font-weight: 700;
+            color: #1e3a1e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+        }
+        .task-timer {
+            font-family: monospace;
+            font-size: 1rem;
+            font-weight: 800;
+            background: #f4fbf4;
+            padding: 2px 10px;
+            border-radius: 30px;
+            color: #2e7d32;
+        }
+        .task-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .icon-btn {
+            background: #f0f7f0;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 30px;
+            cursor: pointer;
+            color: #2e7d32;
+            transition: 0.1s;
+            font-size: 0.8rem;
+        }
+        .copy-tasks-btn {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        .swipe-nav {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 12px 0 8px;
+        }
+        .swipe-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 10px;
+            background: #c8e6c9;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .swipe-dot.active {
+            width: 26px;
+            background: #4caf50;
+        }
+        /* 移除底部按钮区域，不再占用空间 */
+        .toast {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2e3b2ecc;
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            z-index: 2000;
+        }
+        .copy-textarea {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+        }
+        @media (max-width: 550px) {
+            .swipe-container { height: 540px; }
+            .remaining-time { font-size: 1.8rem; }
+            .palace-grid { gap: 8px; }
+            .tasks-grid { max-height: 280px; }  /* 手机进一步释放空间 */
+            .focus-module { gap: 12px; }
+            .time-bubble { padding: 8px; }
+            .task-toolbar { padding: 10px; }
+            .reminder-settings { padding: 6px 10px; }
+        }
+        /* 极窄屏优化 */
+        @media (max-width: 400px) {
+            .add-task-grid .input-group { min-width: 90px; }
+            .mode-group { gap: 6px; padding: 3px 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1><i class="fas fa-leaf"></i> 知易行难 · 时辰录</h1>
+        <p class="tagline">知天时，行人事，日日精进</p>
+        <div class="date-bar">
+            <span class="current-date" id="currentDate"></span>
+            <div class="history-selector">
+                <label><i class="fas fa-calendar-alt"></i> 跳转</label>
+                <input type="date" id="historyDate">
+                <button id="loadHistoryBtn">加载</button>
+            </div>
+        </div>
+        <div class="auto-save-status">
+            <div class="auto-save-icon" id="autoIcon"></div>
+            <span id="autoStatusText">自动保存已开启</span>
+        </div>
+    </header>
+
+    <div class="swipe-container">
+        <div class="swipe-wrapper" id="swipeWrapper">
+            <div class="swipe-panel">
+                <h2><i class="fas fa-chess-board"></i> 十二时辰 · 心镜</h2>
+                <div class="palace-grid" id="palaceGrid"></div>
+                <div class="palace-controls">
+                    <button class="palace-btn" id="prevPeriodBtn"><i class="fas fa-chevron-left"></i> 上一辰</button>
+                    <button class="palace-btn" id="gotoRecordBtn"><i class="fas fa-pen-fancy"></i> 记录此时</button>
+                    <button class="palace-btn" id="nextPeriodBtn">下一辰 <i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="swipe-panel">
+                <h2><i class="fas fa-feather-alt"></i> 当下记录</h2>
+                <div class="period-record">
+                    <div class="period-header">
+                        <div><span class="period-title" id="selectedPeriodName">子时</span><div class="period-subtitle" id="selectedPeriodTime">23:00-01:00</div></div>
+                        <div id="periodStatus" style="font-size:0.8rem; background:#e8f5e9; padding:4px 12px; border-radius:30px;">未记录</div>
+                    </div>
+                    <div class="form-group"><label><i class="fas fa-running"></i> 所做之事</label><select id="actionType"><option value="">选择</option><option value="sleep">🌙 睡觉休息</option><option value="growth">🌱 成长学习</option><option value="waste">⏳ 虚度浪费</option><option value="other">🍃 其他</option></select></div>
+                    <div class="form-group"><label><i class="fas fa-brain"></i> 知易 · 实际所做</label><div class="editor-content" id="knowledgeEditor" contenteditable="true" data-placeholder="写下本时辰具体完成的事情..."></div></div>
+                    <div class="form-group"><label><i class="fas fa-tasks"></i> 行难 · 下个时辰计划</label><div class="editor-content" id="actionEditor" contenteditable="true" data-placeholder="接下来的时辰要做什么..."></div></div>
+                    <div class="form-row" style="display:flex; gap:12px;"><div class="form-group" style="flex:1"><label>😊 心情</label><select id="moodSelect"><option value="">无</option><option value="优">优 · 愉悦</option><option value="良">良 · 平和</option><option value="中">中 · 一般</option><option value="差">差 · 低落</option></select></div><div class="form-group" style="flex:1"><label>⚡ 精神</label><select id="energySelect"><option value="">无</option><option value="优">优 · 饱满</option><option value="良">良 · 尚可</option><option value="中">中 · 疲惫</option><option value="差">差 · 困顿</option></select></div></div>
+                    <div class="action-buttons-small"><button class="action-btn-small save-period-btn" id="savePeriodBtn"><i class="fas fa-save"></i> 保存此时辰</button><button class="action-btn-small clear-period-btn" id="clearPeriodBtn"><i class="fas fa-eraser"></i> 清空</button><button class="action-btn-small" id="backToPalaceBtn" style="background:#2196f3;color:white;"><i class="fas fa-arrow-left"></i> 回宫格</button></div>
+                </div>
+                <div class="daily-summary"><h3 style="color:#2e7d32;"><i class="fas fa-book"></i> 每日结语</h3><textarea id="summaryText" placeholder="今日的感悟、反思或明日寄语..."></textarea><button class="copy-summary-btn" id="copySummaryBtn"><i class="fas fa-copy"></i> 复制今日完整记录</button></div>
+            </div>
+            <div class="swipe-panel">
+                <div class="focus-module">
+                    <div class="time-bubble"><div class="time-label"><i class="far fa-hourglass-half"></i> 今日余时</div><div class="remaining-time" id="remainingTimeDisplay">--:--:--</div></div>
+                    <div class="task-toolbar">
+                        <div class="add-task-grid">
+                            <div class="input-group"><label>📌 事项</label><input type="text" id="taskNameInput" placeholder="例：读书/写代码"></div>
+                            <div class="mode-group"><label><input type="radio" name="timerMode" value="countup" checked> 正计时</label><label><input type="radio" name="timerMode" value="countdown"> 倒计时</label></div>
+                            <div class="input-group" id="presetTimeGroup" style="display:none;"><label>⏱️ 预设(时/分)</label><div style="display:flex; gap:6px;"><input type="number" id="presetHours" value="0" min="0" placeholder="时" style="width:65px;"><input type="number" id="presetMinutes" value="25" min="0" placeholder="分" style="width:65px;"></div></div>
+                            <button class="add-btn" id="addTaskBtn"><i class="fas fa-plus"></i> 添加</button>
+                            <button class="add-btn rain-btn" id="rainToggleBtn"><i class="fas fa-cloud-rain"></i> <span id="rainText">雨声</span></button>
+                        </div>
+                    </div>
+                    <div class="reminder-settings">
+                        <div class="reminder-item"><label><i class="fas fa-vibrate"></i> 震动</label><div id="vibrateToggle" class="toggle-switch"></div></div>
+                        <div class="reminder-item"><label><i class="fas fa-bell"></i> 提醒(分)</label><input type="number" id="reminderInterval" value="30" min="1" step="1"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin:8px 0 4px;"><span style="font-weight:700; color:#2e7d32;"><i class="fas fa-list-check"></i> 专注清单</span><button class="copy-tasks-btn" id="copyTasksBtn"><i class="fas fa-copy"></i> 一键复制成果</button></div>
+                    <div id="tasksContainer" class="tasks-grid"><div class="empty-message" style="text-align:center; padding:20px;">✨ 添加任务，开始专注 ✨</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="swipe-nav">
+        <div class="swipe-dot active" data-panel="0"></div>
+        <div class="swipe-dot" data-panel="1"></div>
+        <div class="swipe-dot" data-panel="2"></div>
+    </div>
+    <!-- 移除了上一面/下一面按钮区域，以释放专注清单的垂直空间 -->
+</div>
+<input type="file" id="importFileInput" accept=".json" style="display:none;">
+<textarea id="copyTextarea" class="copy-textarea"></textarea>
+
+<script>
+    // ======================= 十二时辰核心 (完整保留所有功能) =======================
+    const periods = [
+        { name: "子时", time: "23:00-01:00", hours: [23,0] }, { name: "丑时", time: "01:00-03:00", hours: [1,2] }, { name: "寅时", time: "03:00-05:00", hours: [3,4] },
+        { name: "卯时", time: "05:00-07:00", hours: [5,6] }, { name: "辰时", time: "07:00-09:00", hours: [7,8] }, { name: "巳时", time: "09:00-11:00", hours: [9,10] },
+        { name: "午时", time: "11:00-13:00", hours: [11,12] }, { name: "未时", time: "13:00-15:00", hours: [13,14] }, { name: "申时", time: "15:00-17:00", hours: [15,16] },
+        { name: "酉时", time: "17:00-19:00", hours: [17,18] }, { name: "戌时", time: "19:00-21:00", hours: [19,20] }, { name: "亥时", time: "21:00-23:00", hours: [21,22] }
+    ];
+    let currentDateStr = "", currentPeriodIdx = 0, currentPanel = 0;
+    let diaryData = { date: "", periods: {}, summary: "" };
+    let userLockedDate = false;
+
+    function getDiaryDateFromDate(date) {
+        let d = new Date(date);
+        let hour = d.getHours();
+        if (hour >= 23) d.setDate(d.getDate() + 1);
+        let year = d.getFullYear();
+        let month = String(d.getMonth() + 1).padStart(2, '0');
+        let day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    function getTodayDiaryDate() { return getDiaryDateFromDate(new Date()); }
+    function getCurrentPeriodIndexByTime() {
+        let now = new Date();
+        let hour = now.getHours();
+        for (let i = 0; i < periods.length; i++) {
+            if (periods[i].hours.includes(hour)) return i;
+        }
+        return 0;
+    }
+    function updateCurrentTimeHighlight() {
+        let currentIdx = getCurrentPeriodIndexByTime();
+        document.querySelectorAll('.palace-cell').forEach((cell, idx) => {
+            if (idx === currentIdx) cell.classList.add('current-time');
+            else cell.classList.remove('current-time');
+        });
+    }
+    function checkDateAndAutoSwitch() {
+        let realToday = getTodayDiaryDate();
+        if (userLockedDate && currentDateStr !== realToday) {
+            updateCurrentTimeHighlight();
+            return;
+        }
+        if (currentDateStr !== realToday) {
+            loadDiaryData(realToday);
+            userLockedDate = false;
+        } else {
+            updateCurrentTimeHighlight();
+        }
+    }
+    function syncSelectedPeriodWithCurrentTime() {
+        let currentIdx = getCurrentPeriodIndexByTime();
+        if (currentPeriodIdx !== currentIdx) selectPeriod(currentIdx);
+    }
+    function loadDiaryData(dateStr) {
+        currentDateStr = dateStr;
+        updateDateUI();
+        document.getElementById('historyDate').value = dateStr;
+        let raw = localStorage.getItem(`diary_${dateStr}`);
+        if(raw) { diaryData = JSON.parse(raw); if(!diaryData.periods) diaryData.periods={}; }
+        else { diaryData = { date: dateStr, periods: {}, summary: "" }; }
+        document.getElementById('summaryText').value = diaryData.summary || "";
+        renderPalaceGrid();
+        let realToday = getTodayDiaryDate();
+        if (dateStr === realToday) {
+            let currentIdx = getCurrentPeriodIndexByTime();
+            selectPeriod(currentIdx);
+        } else {
+            if (currentPeriodIdx >= periods.length) currentPeriodIdx = 0;
+            selectPeriod(currentPeriodIdx);
+        }
+        updateRecordForm();
+        updateCurrentTimeHighlight();
+    }
+    function updateDateUI() {
+        let [y,m,d] = currentDateStr.split('-');
+        document.getElementById('currentDate').innerHTML = `<i class="far fa-calendar-alt"></i> ${y}年${parseInt(m)}月${parseInt(d)}日`;
+    }
+    function renderPalaceGrid() {
+        let grid = document.getElementById('palaceGrid');
+        grid.innerHTML = "";
+        periods.forEach((p, idx) => {
+            let data = diaryData.periods[p.name] || {};
+            let cell = document.createElement('div');
+            cell.className = `palace-cell ${idx === currentPeriodIdx ? 'active' : ''}`;
+            cell.innerHTML = `<div class="palace-name">${p.name}</div><div class="palace-time">${p.time}</div><div class="palace-status">${data.mood ? `<span class="status-icon mood-${data.mood}">${data.mood}</span>` : ''}${data.energy ? `<span class="status-icon energy-${data.energy}">${data.energy}</span>` : ''}</div><div class="action-icon">${data.action ? (data.action==='sleep'?'<i class="fas fa-bed"></i>':data.action==='growth'?'<i class="fas fa-seedling"></i>':data.action==='waste'?'<i class="fas fa-hourglass-half"></i>':'<i class="fas fa-ellipsis-h"></i>') : ''}</div>`;
+            cell.onclick = () => { selectPeriod(idx); goToPanel(1); };
+            grid.appendChild(cell);
+        });
+        updateCurrentTimeHighlight();
+    }
+    function selectPeriod(idx) { currentPeriodIdx = idx; updateRecordForm(); renderPalaceGrid(); }
+    function updateRecordForm() {
+        let p = periods[currentPeriodIdx];
+        let data = diaryData.periods[p.name] || {};
+        document.getElementById('selectedPeriodName').innerText = p.name;
+        document.getElementById('selectedPeriodTime').innerText = p.time;
+        document.getElementById('actionType').value = data.action || "";
+        document.getElementById('knowledgeEditor').innerHTML = data.knowledge || "";
+        document.getElementById('actionEditor').innerHTML = data.actionPlan || "";
+        document.getElementById('moodSelect').value = data.mood || "";
+        document.getElementById('energySelect').value = data.energy || "";
+        document.getElementById('periodStatus').innerHTML = (data.knowledge || data.action) ? "✅ 已记" : "⚪ 未记";
+    }
+    function saveCurrentPeriod() {
+        let pname = periods[currentPeriodIdx].name;
+        diaryData.periods[pname] = {
+            action: document.getElementById('actionType').value,
+            knowledge: document.getElementById('knowledgeEditor').innerHTML,
+            actionPlan: document.getElementById('actionEditor').innerHTML,
+            mood: document.getElementById('moodSelect').value,
+            energy: document.getElementById('energySelect').value
+        };
+        localStorage.setItem(`diary_${currentDateStr}`, JSON.stringify(diaryData));
+        renderPalaceGrid(); updateRecordForm();
+        showToast("时辰已保存");
+    }
+    function clearCurrentPeriod() { if(confirm("清空此时辰记录？")){ delete diaryData.periods[periods[currentPeriodIdx].name]; localStorage.setItem(`diary_${currentDateStr}`, JSON.stringify(diaryData)); updateRecordForm(); renderPalaceGrid(); showToast("已清空"); } }
+
+    async function copyToClipboard(text, successMsg = "已复制到剪贴板") {
+        if (navigator.clipboard && window.isSecureContext) {
+            try { await navigator.clipboard.writeText(text); showToast(successMsg); return; } catch(e) {}
+        }
+        const textarea = document.getElementById('copyTextarea');
+        textarea.value = text;
+        textarea.style.display = 'block';
+        textarea.style.position = 'fixed';
+        textarea.style.left = '0';
+        textarea.style.top = '0';
+        textarea.style.opacity = '0';
+        textarea.select();
+        let success = false;
+        try { success = document.execCommand('copy'); } catch(e) {}
+        textarea.style.display = 'none';
+        if(success) showToast(successMsg);
+        else showToast("请手动复制", 1500);
+    }
+    function copyTodayRecord() {
+        let text = `📖 知易行难 · ${currentDateStr}\n` + "═".repeat(30) + "\n";
+        periods.forEach(p => {
+            let d = diaryData.periods[p.name] || {};
+            text += `【${p.name} ${p.time}】 所为:${d.action||'未记'} 心情:${d.mood||'无'} 精力:${d.energy||'无'}\n知易:${(d.knowledge||'').replace(/<[^>]*>/g,'').slice(0,80)}\n行难:${(d.actionPlan||'').replace(/<[^>]*>/g,'').slice(0,80)}\n\n`;
+        });
+        text += `📝 总结：${diaryData.summary || '无'}\n` + "═".repeat(30);
+        copyToClipboard(text, "完整日记已复制");
+    }
+
+    // ======================= 专注模块 (完整保留) =======================
+    let tasks = [], rainCtx = null, rainSource = null, isRain = false, rainBuffer = null;
+    let vibrateEnabled = false, reminderIntervalSec = 30 * 60;
+    let lastRemindSec = new Map();
+    function formatSec(sec) { let h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60; return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
+    function updateRemaining() { let now=new Date(), end=new Date(); end.setHours(23,59,59,999); let diff=Math.max(0,Math.floor((end-now)/1000)); document.getElementById('remainingTimeDisplay').innerText = formatSec(diff); }
+    setInterval(updateRemaining,1000); updateRemaining();
+    function doRemind(isCountdownEnd = false) { if (vibrateEnabled && navigator.vibrate) navigator.vibrate(isCountdownEnd ? [500] : [300]); if (isCountdownEnd) playBeep(); }
+    function playBeep() { try { let ctx = new (window.AudioContext || window.webkitAudioContext)(); let osc = ctx.createOscillator(), gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 880; gain.gain.setValueAtTime(0.2, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6); osc.start(); osc.stop(ctx.currentTime + 0.5); ctx.resume(); } catch(e) {} }
+    function renderTasks() {
+        let container = document.getElementById('tasksContainer');
+        if(!tasks.length){ container.innerHTML='<div class="empty-message" style="text-align:center; padding:20px;">🌟 添加任务，开始专注 🌟</div>'; return; }
+        container.innerHTML = tasks.map(t => `<div class="task-card" data-id="${t.id}"><div class="task-info"><div class="task-name">${escapeHtml(t.name)} <span class="task-timer" id="timer-${t.id}">${formatSec(t.current)}</span></div></div><div class="task-actions"><button class="icon-btn ${t.running?'pause-btn':'start-btn'}" data-id="${t.id}"><i class="fas ${t.running?'fa-pause':'fa-play'}"></i></button><button class="icon-btn reset-btn" data-id="${t.id}"><i class="fas fa-undo-alt"></i></button><button class="icon-btn danger" data-id="${t.id}"><i class="fas fa-trash"></i></button></div></div>`).join('');
+        attachTaskEvents();
+    }
+    function attachTaskEvents() {
+        document.querySelectorAll('.start-btn').forEach(btn => btn.onclick = (e) => { let id=parseInt(btn.dataset.id); startTask(id); });
+        document.querySelectorAll('.pause-btn').forEach(btn => btn.onclick = (e) => { let id=parseInt(btn.dataset.id); pauseTask(id); });
+        document.querySelectorAll('.reset-btn').forEach(btn => btn.onclick = (e) => { let id=parseInt(btn.dataset.id); resetTask(id); });
+        document.querySelectorAll('.danger').forEach(btn => btn.onclick = (e) => { let id=parseInt(btn.dataset.id); deleteTask(id); });
+    }
+    function startTask(id) { let t = tasks.find(t=>t.id===id); if(t){ if(t.mode==='countdown' && t.current<=0) t.current=t.initial; t.running=true; if(t.mode==='countup') lastRemindSec.set(t.id, t.current); persistTasks(); renderTasks(); } }
+    function pauseTask(id) { let t=tasks.find(t=>t.id===id); if(t){ t.running=false; persistTasks(); renderTasks(); } }
+    function resetTask(id) { let t=tasks.find(t=>t.id===id); if(t){ t.current=t.initial; t.running=false; if(t.mode==='countup') lastRemindSec.set(t.id, t.current); persistTasks(); renderTasks(); } }
+    function deleteTask(id) { tasks = tasks.filter(t=>t.id!==id); lastRemindSec.delete(id); persistTasks(); renderTasks(); }
+    function persistTasks() { localStorage.setItem('focus_tasks', JSON.stringify(tasks)); }
+    function loadTasks() { let saved = localStorage.getItem('focus_tasks'); if(saved) tasks = JSON.parse(saved); else tasks=[]; renderTasks(); }
+    function addFocusTask() {
+        let name = document.getElementById('taskNameInput').value.trim();
+        if(!name) return showToast("请输入任务名");
+        let mode = document.querySelector('input[name="timerMode"]:checked').value;
+        let initial = 0;
+        if(mode === 'countdown') {
+            let h = parseInt(document.getElementById('presetHours').value)||0;
+            let m = parseInt(document.getElementById('presetMinutes').value)||0;
+            initial = h*3600 + m*60;
+            if(initial<=0) return showToast("倒计时需大于0");
+        }
+        let newId = Date.now();
+        tasks.push({ id: newId, name, mode, initial, current: initial, running: false });
+        if(mode === 'countup') lastRemindSec.set(newId, 0);
+        persistTasks(); renderTasks(); document.getElementById('taskNameInput').value = ''; showToast("✅ 任务已添加");
+    }
+    function copyFocusReport() {
+        let lines = tasks.map(t => `${currentDateStr} ${t.name} ${(t.current / 3600).toFixed(1)}小时`);
+        let output = lines.length ? lines.join('\n') : "今日暂无专注记录";
+        copyToClipboard(output, "专注成果已复制");
+    }
+    setInterval(() => {
+        let changed = false;
+        tasks.forEach(t => {
+            if(t.running) {
+                let prev = t.current;
+                if(t.mode === 'countup') {
+                    t.current++;
+                    let last = lastRemindSec.get(t.id) || 0;
+                    if(reminderIntervalSec > 0 && (t.current - last) >= reminderIntervalSec) { doRemind(false); lastRemindSec.set(t.id, t.current); }
+                    changed = true;
+                } else {
+                    if(t.current > 0) { t.current--; if(t.current === 0) { t.running = false; doRemind(true); showToast(`⏰ 倒计时完成: ${t.name}`); } changed = true; }
+                }
+                if(prev !== t.current) changed = true;
+            }
+        });
+        if(changed) { persistTasks(); renderTasks(); }
+    }, 1000);
+    async function initRain() { if(!rainCtx){ rainCtx=new (window.AudioContext||window.webkitAudioContext)(); let buf=rainCtx.createBuffer(1, rainCtx.sampleRate*3, rainCtx.sampleRate); let data=buf.getChannelData(0); for(let i=0;i<buf.length;i++) data[i]=Math.random()*2-1; rainBuffer=buf; } }
+    function toggleRain() { if(isRain){ if(rainSource){ rainSource.stop(); rainSource=null; } isRain=false; document.getElementById('rainText').innerText='雨声'; document.getElementById('rainToggleBtn').classList.remove('active'); } else { if(!rainCtx){ initRain().then(()=>startRainLoop()); } else startRainLoop(); } }
+    function startRainLoop() { if(!rainCtx||!rainBuffer) return; rainCtx.resume(); if(rainSource) rainSource.stop(); rainSource=rainCtx.createBufferSource(); rainSource.buffer=rainBuffer; rainSource.loop=true; let gain=rainCtx.createGain(); gain.gain.value=0.3; rainSource.connect(gain); gain.connect(rainCtx.destination); rainSource.start(); isRain=true; document.getElementById('rainText').innerText='雨声开'; document.getElementById('rainToggleBtn').classList.add('active'); }
+    function showToast(msg) { let t=document.createElement('div'); t.className='toast'; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),1800); }
+    function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    function goToPanel(idx) { if(idx<0||idx>2) return; currentPanel=idx; document.getElementById('swipeWrapper').style.transform = `translateX(-${idx*33.333}%)`; document.querySelectorAll('.swipe-dot').forEach((dot,i)=>{ if(i==idx) dot.classList.add('active'); else dot.classList.remove('active'); }); }
+    function initReminderUI() {
+        let vibrateDiv = document.getElementById('vibrateToggle');
+        let intervalInput = document.getElementById('reminderInterval');
+        vibrateDiv.addEventListener('click', () => { vibrateEnabled = !vibrateEnabled; vibrateDiv.classList.toggle('active', vibrateEnabled); showToast(vibrateEnabled ? "震动提醒开启" : "震动关闭"); });
+        intervalInput.addEventListener('change', () => { let val = parseInt(intervalInput.value); if(val>0) reminderIntervalSec = val * 60; else reminderIntervalSec = 30*60; showToast(`正计时提醒间隔设为 ${val} 分钟`); });
+        vibrateEnabled = false; vibrateDiv.classList.remove('active'); reminderIntervalSec = 30 * 60; intervalInput.value = 30;
+    }
+    function goToday() {
+        let today = getTodayDiaryDate();
+        userLockedDate = false;
+        loadDiaryData(today);
+        showToast("已回到今日");
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        let initDate = getTodayDiaryDate();
+        loadDiaryData(initDate);
+        loadTasks();
+        initReminderUI();
+        let currentIdx = getCurrentPeriodIndexByTime();
+        selectPeriod(currentIdx);
+        updateCurrentTimeHighlight();
+        document.getElementById('savePeriodBtn').onclick = saveCurrentPeriod;
+        document.getElementById('clearPeriodBtn').onclick = clearCurrentPeriod;
+        document.getElementById('copySummaryBtn').onclick = copyTodayRecord;
+        document.getElementById('prevPeriodBtn').onclick = () => { selectPeriod((currentPeriodIdx-1+12)%12); };
+        document.getElementById('nextPeriodBtn').onclick = () => { selectPeriod((currentPeriodIdx+1)%12); };
+        document.getElementById('gotoRecordBtn').onclick = () => goToPanel(1);
+        document.getElementById('backToPalaceBtn').onclick = () => goToPanel(0);
+        document.querySelectorAll('.swipe-dot').forEach((dot,idx)=> dot.onclick = () => goToPanel(idx));
+        document.getElementById('addTaskBtn').onclick = addFocusTask;
+        document.getElementById('copyTasksBtn').onclick = copyFocusReport;
+        document.getElementById('rainToggleBtn').onclick = toggleRain;
+        document.getElementById('currentDate').onclick = goToday;
+        document.querySelectorAll('input[name="timerMode"]').forEach(r=>r.onchange = ()=> { document.getElementById('presetTimeGroup').style.display = document.querySelector('input[name="timerMode"]:checked').value==='countdown'?'flex':'none'; });
+        document.getElementById('loadHistoryBtn').onclick = () => { let date = document.getElementById('historyDate').value; if(date) { userLockedDate = true; loadDiaryData(date); } else showToast("请选择日期"); };
+        setInterval(()=>{ let icon=document.getElementById('autoIcon'); if(icon) icon.classList.toggle('active'); }, 2000);
+        setInterval(() => {
+            checkDateAndAutoSwitch();
+            let realToday = getTodayDiaryDate();
+            if (currentDateStr === realToday && !userLockedDate) syncSelectedPeriodWithCurrentTime();
+            updateCurrentTimeHighlight();
+        }, 60000);
+        setInterval(updateRemaining, 1000);
+    });
+</script>
+</body>
+</html>
